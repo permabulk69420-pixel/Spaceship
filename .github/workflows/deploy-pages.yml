@@ -3,6 +3,7 @@ name: Deploy Codex build to GitHub Pages
 on:
   push:
     branches:
+      - main
       - agent/codex-vr-visual-slice
   workflow_dispatch:
 
