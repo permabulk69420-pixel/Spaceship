@@ -256,7 +256,7 @@ export function createShip(materials) {
   box(ship, [0.17, 0.68, 4.55], [-hullHalfWidth, 2.91, 5.05], materials.paint, [0, 0, 0], 0.03);
   box(ship, [0.17, 3.18, 0.45], [-hullHalfWidth, 1.58, 2.58], materials.paint, [0, 0, 0], 0.03);
   box(ship, [0.17, 3.18, 8.2], [-hullHalfWidth, 1.58, 11.36], materials.paint, [0, 0, 0], 0.04);
-  addWindowFrame(ship, {
+  const bunkWindow = addWindowFrame(ship, {
     position: [-hullHalfWidth - 0.09, 1.64, 5.05],
     width: 4.2,
     height: 1.72,
@@ -264,6 +264,7 @@ export function createShip(materials) {
     materials,
     mullions: 1,
   });
+  bunkWindow.name = 'Bunk observation window';
 
   // Right pressure wall: a six-metre observation bay and a long armored service run aft.
   box(ship, [0.17, 3.18, 3.4], [hullHalfWidth, 1.58, -12.78], materials.paint, [0, 0, 0], 0.04);
@@ -308,6 +309,8 @@ export function createShip(materials) {
   ship.add(dish);
 
   // Aft drive body, radiator outriggers, and engine bells establish the full ship silhouette.
+  // Keep the tall radiators behind the habitation glazing so the bunk window reads as space,
+  // not as a close-up of an exterior panel.
   cylinder(ship, [3.0, 3.45], 9.5, [0, 0.15, 20.15], materials.exterior, [Math.PI / 2, 0, 0], 24);
   for (let z = 15.8; z <= 24.1; z += 1.65) {
     const ring = new THREE.Mesh(new THREE.TorusGeometry(3.32, 0.11, 8, 36), materials.bareMetal);
@@ -317,11 +320,13 @@ export function createShip(materials) {
   [-1.55, 0, 1.55].forEach((x) => {
     cylinder(ship, [0.85, 1.25], 2.25, [x, 0.04, 25.25], materials.rubber, [Math.PI / 2, 0, 0], 20);
   });
-  box(ship, [16.5, 0.09, 8.4], [0, -0.9, 6.7], materials.exterior, [0, 0, 0], 0.035);
-  box(ship, [0.09, 3.2, 10.5], [-7.75, 0.2, 7.1], materials.exterior, [0, 0, -3 * DEG], 0.025);
-  box(ship, [0.09, 3.2, 10.5], [7.75, 0.2, 7.1], materials.exterior, [0, 0, 3 * DEG], 0.025);
-  tube(ship, [[3.66, -0.35, -8], [5.2, -0.55, -1], [7.65, -0.2, 7]], 0.075, materials.bareMetal, false, 54);
-  tube(ship, [[-3.66, -0.35, -8], [-5.2, -0.55, -1], [-7.65, -0.2, 7]], 0.075, materials.bareMetal, false, 54);
+  box(ship, [16.5, 0.09, 8.4], [0, -0.9, 9.6], materials.exterior, [0, 0, 0], 0.035);
+  const portRadiator = box(ship, [0.09, 3.2, 8.6], [-7.75, 0.2, 13.05], materials.exterior, [0, 0, -3 * DEG], 0.025);
+  const starboardRadiator = box(ship, [0.09, 3.2, 8.6], [7.75, 0.2, 13.05], materials.exterior, [0, 0, 3 * DEG], 0.025);
+  portRadiator.name = 'Port aft radiator';
+  starboardRadiator.name = 'Starboard aft radiator';
+  tube(ship, [[3.66, -0.35, -8], [5.2, -0.55, 2.8], [7.65, -0.2, 13.05]], 0.075, materials.bareMetal, false, 54);
+  tube(ship, [[-3.66, -0.35, -8], [-5.2, -0.55, 2.8], [-7.65, -0.2, 13.05]], 0.075, materials.bareMetal, false, 54);
 
   // Deck plates and long central companionway.
   box(ship, [1.42, 0.018, 28.2], [0, 0.008, 0.15], materials.rubber, [0, 0, 0], 0.025, false);
@@ -363,64 +368,131 @@ export function createShip(materials) {
     warmLights.push(light);
   });
 
-  // Cockpit consoles and pilot station.
+  // Cockpit: two forward-facing crew stations with dense, purely visual instrumentation.
   const cockpit = new THREE.Group();
+  cockpit.name = 'Flight deck cockpit';
   cockpit.position.z = -7.55;
   ship.add(cockpit);
-  box(cockpit, [5.52, 0.92, 0.88], [0, 0.62, -5.02], materials.darkPaint, [-12 * DEG, 0, 0], 0.12);
-  box(cockpit, [0.68, 0.8, 1.65], [-2.72, 0.48, -4.34], materials.darkPaint, [0, 8 * DEG, 0], 0.09);
-  box(cockpit, [0.68, 0.8, 1.65], [2.72, 0.48, -4.34], materials.darkPaint, [0, -8 * DEG, 0], 0.09);
+
+  // A low wraparound console preserves the enormous view while giving the bridge a clear silhouette.
+  box(cockpit, [5.45, 0.56, 1.18], [0, 0.58, -4.72], materials.darkPaint, [-10 * DEG, 0, 0], 0.12);
+  box(cockpit, [5.18, 0.24, 0.32], [0, 1.14, -4.95], materials.rubber, [-4 * DEG, 0, 0], 0.06);
+  box(cockpit, [0.74, 0.72, 1.62], [-2.72, 0.46, -4.3], materials.darkPaint, [0, 8 * DEG, 0], 0.09);
+  box(cockpit, [0.74, 0.72, 1.62], [2.72, 0.46, -4.3], materials.darkPaint, [0, -8 * DEG, 0], 0.09);
+  box(cockpit, [0.22, 0.62, 0.92], [-2.42, 0.3, -4.7], materials.bareMetal, [0, 0, 0], 0.04);
+  box(cockpit, [0.22, 0.62, 0.92], [2.42, 0.3, -4.7], materials.bareMetal, [0, 0, 0], 0.04);
+
   addScreen(cockpit, {
-    position: [0, 1.0, -4.69],
-    rotation: [-17 * DEG, 0, 0],
-    size: [1.52, 0.58],
+    position: [-1.18, 1.02, -4.55],
+    rotation: [-18 * DEG, 2 * DEG, 0],
+    size: [1.08, 0.52],
     seed: 2,
     mode: 'nav',
     materials,
     screenAnimations,
   });
   addScreen(cockpit, {
-    position: [-1.37, 0.86, -4.72],
-    rotation: [-15 * DEG, 4 * DEG, 0],
-    size: [0.7, 0.39],
+    position: [1.18, 1.02, -4.55],
+    rotation: [-18 * DEG, -2 * DEG, 0],
+    size: [1.08, 0.52],
     seed: 3,
     mode: 'amber',
     materials,
     screenAnimations,
   });
   addScreen(cockpit, {
-    position: [1.37, 0.86, -4.72],
-    rotation: [-15 * DEG, -4 * DEG, 0],
-    size: [0.7, 0.39],
+    position: [0, 0.94, -4.49],
+    rotation: [-18 * DEG, 0, 0],
+    size: [0.52, 0.3],
     seed: 4,
+    mode: 'nav',
+    materials,
+    screenAnimations,
+  });
+
+  // Outer repeater displays and round standby instruments make the bridge legible from the entry.
+  addScreen(cockpit, {
+    position: [-2.18, 0.86, -4.42],
+    rotation: [-16 * DEG, 7 * DEG, 0],
+    size: [0.54, 0.32],
+    seed: 7,
+    mode: 'amber',
+    materials,
+    screenAnimations,
+  });
+  addScreen(cockpit, {
+    position: [2.18, 0.86, -4.42],
+    rotation: [-16 * DEG, -7 * DEG, 0],
+    size: [0.54, 0.32],
+    seed: 8,
     mode: 'amber',
     materials,
     screenAnimations,
   });
 
+  [-2.38, -2.12, 2.12, 2.38].forEach((x, index) => {
+    const bezel = cylinder(cockpit, [0.13, 0.13], 0.045, [x, 0.67, -3.99], materials.rubber, [Math.PI / 2, 0, 0], 24, false);
+    bezel.rotation.z = index % 2 ? 5 * DEG : -5 * DEG;
+    cylinder(cockpit, [0.092, 0.092], 0.052, [x, 0.67, -3.96], index % 2 ? materials.greenGlow : materials.amberGlow, [Math.PI / 2, 0, 0], 24, false);
+  });
+
+  // Rows of guarded switches and annunciators are intentionally non-interactive in this slice.
+  const annunciatorMaterials = [materials.amberGlow, materials.greenGlow, materials.redGlow];
+  for (let index = 0; index < 16; index += 1) {
+    const x = -2.18 + index * 0.29;
+    box(
+      cockpit,
+      [0.12, 0.045, 0.1],
+      [x, 0.9 + (index % 2) * 0.07, -4.05],
+      annunciatorMaterials[index % 7 === 0 ? 2 : index % 3 === 0 ? 1 : 0],
+      [-10 * DEG, 0, 0],
+      0.018,
+      false,
+    );
+  }
+
   const pilotSeat = createSeat(materials);
-  pilotSeat.position.set(0, 0, -3.75);
-  pilotSeat.rotation.y = Math.PI;
+  pilotSeat.name = 'Port flight seat';
+  pilotSeat.position.set(-1.15, 0, -3.42);
+  pilotSeat.rotation.y = -2 * DEG;
   cockpit.add(pilotSeat);
   const emptyNavigatorSeat = createSeat(materials);
-  emptyNavigatorSeat.scale.setScalar(0.9);
-  emptyNavigatorSeat.position.set(-1.72, 0, -3.37);
-  emptyNavigatorSeat.rotation.y = Math.PI + 8 * DEG;
+  emptyNavigatorSeat.name = 'Starboard navigation seat';
+  emptyNavigatorSeat.position.set(1.15, 0, -3.42);
+  emptyNavigatorSeat.rotation.y = 2 * DEG;
   cockpit.add(emptyNavigatorSeat);
-  cylinder(cockpit, [0.06, 0.08], 0.52, [-0.55, 0.65, -4.23], materials.bareMetal, [62 * DEG, 0, 0], 10);
-  cylinder(cockpit, [0.06, 0.08], 0.52, [0.55, 0.65, -4.23], materials.bareMetal, [62 * DEG, 0, 0], 10);
-  box(cockpit, [0.16, 0.1, 0.25], [-0.55, 0.89, -4.45], materials.rubber, [0, 0, 0], 0.04);
-  box(cockpit, [0.16, 0.1, 0.25], [0.55, 0.89, -4.45], materials.rubber, [0, 0, 0], 0.04);
 
-  const navOrb = new THREE.Group();
-  navOrb.position.set(0, 1.24, -4.74);
-  cockpit.add(navOrb);
-  const orb = new THREE.Mesh(new THREE.IcosahedronGeometry(0.075, 2), materials.screen);
-  navOrb.add(orb);
-  [0.12, 0.17, 0.22].forEach((radius, index) => {
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(radius, 0.006, 5, 32), materials.screen);
-    ring.rotation.set(index * 0.62, index * 0.9, 0);
-    navOrb.add(ring);
+  // Two chunky mechanical yokes, each aligned with its seat and the forward view.
+  [-1.15, 1.15].forEach((x) => {
+    cylinder(cockpit, [0.055, 0.072], 0.48, [x, 0.62, -4.02], materials.bareMetal, [60 * DEG, 0, 0], 12);
+    cylinder(cockpit, [0.12, 0.12], 0.09, [x, 0.82, -3.88], materials.rubber, [Math.PI / 2, 0, 0], 18);
+    box(cockpit, [0.52, 0.075, 0.075], [x, 0.82, -3.84], materials.bareMetal, [0, 0, 0], 0.025);
+    box(cockpit, [0.1, 0.24, 0.105], [x - 0.24, 0.76, -3.82], materials.rubber, [0, 0, -8 * DEG], 0.035);
+    box(cockpit, [0.1, 0.24, 0.105], [x + 0.24, 0.76, -3.82], materials.rubber, [0, 0, 8 * DEG], 0.035);
+  });
+
+  // Central throttle quadrant and guarded lever bank.
+  box(cockpit, [0.55, 0.22, 0.72], [0, 0.67, -3.85], materials.darkPaint, [-7 * DEG, 0, 0], 0.07);
+  [-0.13, 0.13].forEach((x, index) => {
+    cylinder(cockpit, [0.027, 0.027], 0.34, [x, 0.91, -3.88], materials.bareMetal, [index ? -18 * DEG : -10 * DEG, 0, 0], 10);
+    box(cockpit, [0.12, 0.09, 0.16], [x, 1.08, -3.93 - index * 0.04], materials.rubber, [0, 0, 0], 0.035);
+  });
+  box(cockpit, [0.34, 0.04, 0.08], [0, 0.84, -3.48], materials.redGlow, [0, 0, 0], 0.02, false);
+
+  addLabel(cockpit, {
+    title: 'FLIGHT / PORT',
+    subtitle: 'GUIDANCE / ATTITUDE / TRIM',
+    position: [-1.18, 1.33, -4.92],
+    rotation: [0, 0, 0],
+    size: [0.76, 0.2],
+  });
+  addLabel(cockpit, {
+    title: 'NAV / STARBOARD',
+    subtitle: 'RANGE / SURVEY / COMMS',
+    position: [1.18, 1.33, -4.92],
+    rotation: [0, 0, 0],
+    size: [0.76, 0.2],
+    accent: '#72b8ae',
   });
 
   // Observation lounge with worn couch, table, physical radio, and personal effects.
@@ -645,7 +717,9 @@ export function createShip(materials) {
     new THREE.Box2(new THREE.Vector2(2.1, 1.7), new THREE.Vector2(3.5, 4.7)),
     new THREE.Box2(new THREE.Vector2(2.0, 8.0), new THREE.Vector2(3.5, 10.55)),
     new THREE.Box2(new THREE.Vector2(-3.5, 9.15), new THREE.Vector2(-2.18, 14.1)),
-    new THREE.Box2(new THREE.Vector2(-0.65, -11.85), new THREE.Vector2(0.65, -10.7)),
+    new THREE.Box2(new THREE.Vector2(-1.68, -11.5), new THREE.Vector2(-0.63, -10.45)),
+    new THREE.Box2(new THREE.Vector2(0.63, -11.5), new THREE.Vector2(1.68, -10.45)),
+    new THREE.Box2(new THREE.Vector2(-2.95, -13.15), new THREE.Vector2(2.95, -11.9)),
     new THREE.Box2(new THREE.Vector2(-3.45, -13.85), new THREE.Vector2(-2.2, -11.2)),
     new THREE.Box2(new THREE.Vector2(2.2, -13.85), new THREE.Vector2(3.45, -11.2)),
   ];
@@ -676,10 +750,6 @@ export function createShip(materials) {
     innerDoor.position.x = THREE.MathUtils.damp(innerDoor.position.x, doorOpen ? -2.25 : 0, 5.2, delta);
     warmLights.forEach((light) => {
       light.intensity = THREE.MathUtils.damp(light.intensity, light.userData.targetIntensity, 4, delta);
-    });
-    navOrb.rotation.y += delta * 0.22;
-    navOrb.children.forEach((child, index) => {
-      if (index > 0) child.rotation.z += delta * (0.08 + index * 0.025);
     });
     readingLight.intensity = 7.5 + Math.sin(elapsed * 2.7) * 0.18;
     airlockLight.intensity = 7.4 + Math.sin(elapsed * 1.65) * 0.55;
