@@ -51,6 +51,7 @@ function addLabel(parent, {
   const mesh = new THREE.Mesh(new THREE.PlaneGeometry(size[0], size[1]), material);
   mesh.position.set(...position);
   mesh.rotation.set(...rotation);
+  mesh.userData.isLabel = true;
   parent.add(mesh);
   return mesh;
 }
@@ -147,24 +148,48 @@ function addScreen(parent, {
   group.position.set(...position);
   group.rotation.set(...rotation);
   parent.add(group);
-  box(group, [size[0] + 0.13, size[1] + 0.13, 0.095], [0, 0, 0.035], materials.rubber, [0, 0, 0], 0.05);
+  // The display surface must sit in front of its bezel. The old ordering buried
+  // every screen inside the black backing, which is why the cockpit read as empty.
+  box(group, [size[0] + 0.13, size[1] + 0.13, 0.095], [0, 0, -0.035], materials.rubber, [0, 0, 0], 0.05);
   const animated = makeScreenTexture(seed, mode);
   const material = new THREE.MeshBasicMaterial({ map: animated.texture, toneMapped: false });
   const screen = new THREE.Mesh(new THREE.PlaneGeometry(size[0], size[1]), material);
-  screen.position.z = -0.019;
+  screen.position.z = 0.019;
+  screen.userData.screenMode = mode;
   group.add(screen);
   screenAnimations.push(animated);
   return group;
 }
 
-function createSeat(materials) {
+function createFlightSeat(materials, station) {
   const seat = new THREE.Group();
-  box(seat, [0.76, 0.18, 0.7], [0, 0.53, 0.05], materials.fabric, [-7 * DEG, 0, 0], 0.12);
-  box(seat, [0.7, 0.88, 0.16], [0, 1.01, 0.31], materials.fabric, [-12 * DEG, 0, 0], 0.09);
-  box(seat, [0.12, 0.7, 0.12], [-0.27, 0.22, 0.06], materials.darkPaint, [0, 0, 0], 0.035);
-  box(seat, [0.12, 0.7, 0.12], [0.27, 0.22, 0.06], materials.darkPaint, [0, 0, 0], 0.035);
-  box(seat, [0.17, 0.08, 0.58], [-0.48, 0.69, 0.03], materials.rubber, [0, 0, 0], 0.05);
-  box(seat, [0.17, 0.08, 0.58], [0.48, 0.69, 0.03], materials.rubber, [0, 0, 0], 0.05);
+  cylinder(seat, [0.18, 0.23], 0.34, [0, 0.2, 0.08], materials.bareMetal, [0, 0, 0], 16);
+  box(seat, [0.66, 0.14, 0.6], [0, 0.4, 0.06], materials.darkPaint, [0, 0, 0], 0.08);
+  box(seat, [0.72, 0.2, 0.76], [0, 0.56, -0.02], materials.fabric, [-6 * DEG, 0, 0], 0.13);
+
+  // Hard rear shell and exposed frame make the seats convincing from the entry.
+  box(seat, [0.86, 1.16, 0.16], [0, 1.12, 0.36], materials.darkPaint, [-9 * DEG, 0, 0], 0.11);
+  box(seat, [0.65, 0.86, 0.15], [0, 1.08, 0.22], materials.fabric, [-9 * DEG, 0, 0], 0.1);
+  box(seat, [0.17, 0.9, 0.22], [-0.37, 1.08, 0.26], materials.rubber, [-9 * DEG, 0, -2 * DEG], 0.07);
+  box(seat, [0.17, 0.9, 0.22], [0.37, 1.08, 0.26], materials.rubber, [-9 * DEG, 0, 2 * DEG], 0.07);
+  box(seat, [0.5, 0.25, 0.19], [0, 1.7, 0.43], materials.fabric, [-7 * DEG, 0, 0], 0.09);
+  cylinder(seat, [0.035, 0.035], 1.12, [-0.46, 0.95, 0.42], materials.bareMetal, [0, 0, 0], 10);
+  cylinder(seat, [0.035, 0.035], 1.12, [0.46, 0.95, 0.42], materials.bareMetal, [0, 0, 0], 10);
+
+  // Armrests sit slightly forward of the shell and frame the occupant without looking oversized.
+  box(seat, [0.15, 0.13, 0.52], [-0.48, 0.76, -0.03], materials.rubber, [0, 0, 0], 0.055);
+  box(seat, [0.15, 0.13, 0.52], [0.48, 0.76, -0.03], materials.rubber, [0, 0, 0], 0.055);
+  box(seat, [0.1, 0.34, 0.1], [-0.48, 0.57, 0.17], materials.bareMetal, [0, 0, 0], 0.03);
+  box(seat, [0.1, 0.34, 0.1], [0.48, 0.57, 0.17], materials.bareMetal, [0, 0, 0], 0.03);
+
+  addLabel(seat, {
+    title: station,
+    subtitle: 'FLIGHT SEAT',
+    position: [0, 1.15, 0.455],
+    size: [0.42, 0.15],
+    align: 'center',
+    accent: '#aa714f',
+  });
   return seat;
 }
 
@@ -368,132 +393,144 @@ export function createShip(materials) {
     warmLights.push(light);
   });
 
-  // Cockpit: two forward-facing crew stations with dense, purely visual instrumentation.
+  // Cockpit: a restrained, two-seat bridge. Everything here is visual only.
   const cockpit = new THREE.Group();
   cockpit.name = 'Flight deck cockpit';
   cockpit.position.z = -7.55;
   ship.add(cockpit);
 
-  // A low wraparound console preserves the enormous view while giving the bridge a clear silhouette.
-  box(cockpit, [5.45, 0.56, 1.18], [0, 0.58, -4.72], materials.darkPaint, [-10 * DEG, 0, 0], 0.12);
-  box(cockpit, [5.18, 0.24, 0.32], [0, 1.14, -4.95], materials.rubber, [-4 * DEG, 0, 0], 0.06);
-  box(cockpit, [0.74, 0.72, 1.62], [-2.72, 0.46, -4.3], materials.darkPaint, [0, 8 * DEG, 0], 0.09);
-  box(cockpit, [0.74, 0.72, 1.62], [2.72, 0.46, -4.3], materials.darkPaint, [0, -8 * DEG, 0], 0.09);
-  box(cockpit, [0.22, 0.62, 0.92], [-2.42, 0.3, -4.7], materials.bareMetal, [0, 0, 0], 0.04);
-  box(cockpit, [0.22, 0.62, 0.92], [2.42, 0.3, -4.7], materials.bareMetal, [0, 0, 0], 0.04);
+  const cockpitAmber = materials.amberGlow.clone();
+  cockpitAmber.emissiveIntensity = 1.65;
+  const cockpitGreen = materials.greenGlow.clone();
+  cockpitGreen.emissiveIntensity = 1.35;
+  const cockpitRed = materials.redGlow.clone();
+  cockpitRed.emissiveIntensity = 1.55;
 
+  // One continuous dashboard gives the bridge a readable silhouette. The vertical
+  // instrument panel stops below eye height, preserving the nebula view above it.
+  box(cockpit, [5.76, 0.16, 0.96], [0, 0.12, -4.78], materials.rubber, [0, 0, 0], 0.06);
+  box(cockpit, [5.54, 0.72, 0.76], [0, 0.48, -4.92], materials.darkPaint, [0, 0, 0], 0.1);
+  box(cockpit, [5.5, 0.14, 1.08], [0, 0.88, -4.42], materials.darkPaint, [-5 * DEG, 0, 0], 0.07);
+  box(cockpit, [5.38, 0.9, 0.14], [0, 1.3, -4.9], materials.darkPaint, [0, 0, 0], 0.055);
+  box(cockpit, [5.48, 0.065, 0.19], [0, 1.78, -4.88], materials.bareMetal, [0, 0, 0], 0.02);
+  box(cockpit, [5.46, 0.07, 0.22], [0, 0.82, -4.83], materials.bareMetal, [0, 0, 0], 0.02);
+  [-2.68, -0.55, 0.55, 2.68].forEach((x) => {
+    box(cockpit, [0.055, 0.88, 0.18], [x, 1.3, -4.82], materials.bareMetal, [0, 0, 0], 0.015);
+  });
+
+  // Three coherent display clusters replace the floating, intersecting screen pile.
   addScreen(cockpit, {
-    position: [-1.18, 1.02, -4.55],
-    rotation: [-18 * DEG, 2 * DEG, 0],
-    size: [1.08, 0.52],
+    position: [-1.58, 1.34, -4.79],
+    rotation: [-4 * DEG, 0, 0],
+    size: [1.48, 0.56],
     seed: 2,
     mode: 'nav',
     materials,
     screenAnimations,
   });
   addScreen(cockpit, {
-    position: [1.18, 1.02, -4.55],
-    rotation: [-18 * DEG, -2 * DEG, 0],
-    size: [1.08, 0.52],
+    position: [0, 1.34, -4.78],
+    rotation: [-4 * DEG, 0, 0],
+    size: [0.62, 0.56],
     seed: 3,
     mode: 'amber',
     materials,
     screenAnimations,
   });
   addScreen(cockpit, {
-    position: [0, 0.94, -4.49],
-    rotation: [-18 * DEG, 0, 0],
-    size: [0.52, 0.3],
+    position: [1.58, 1.34, -4.79],
+    rotation: [-4 * DEG, 0, 0],
+    size: [1.48, 0.56],
     seed: 4,
-    mode: 'nav',
-    materials,
-    screenAnimations,
-  });
-
-  // Outer repeater displays and round standby instruments make the bridge legible from the entry.
-  addScreen(cockpit, {
-    position: [-2.18, 0.86, -4.42],
-    rotation: [-16 * DEG, 7 * DEG, 0],
-    size: [0.54, 0.32],
-    seed: 7,
-    mode: 'amber',
-    materials,
-    screenAnimations,
-  });
-  addScreen(cockpit, {
-    position: [2.18, 0.86, -4.42],
-    rotation: [-16 * DEG, -7 * DEG, 0],
-    size: [0.54, 0.32],
-    seed: 8,
     mode: 'amber',
     materials,
     screenAnimations,
   });
 
-  [-2.38, -2.12, 2.12, 2.38].forEach((x, index) => {
-    const bezel = cylinder(cockpit, [0.13, 0.13], 0.045, [x, 0.67, -3.99], materials.rubber, [Math.PI / 2, 0, 0], 24, false);
-    bezel.rotation.z = index % 2 ? 5 * DEG : -5 * DEG;
-    cylinder(cockpit, [0.092, 0.092], 0.052, [x, 0.67, -3.96], index % 2 ? materials.greenGlow : materials.amberGlow, [Math.PI / 2, 0, 0], 24, false);
+  addLabel(cockpit, {
+    title: 'PILOT / 01',
+    subtitle: 'GUIDANCE  ATTITUDE  TRIM',
+    position: [-1.58, 1.7, -4.79],
+    size: [1.18, 0.17],
+    align: 'center',
+  });
+  addLabel(cockpit, {
+    title: 'SURVEY / 02',
+    subtitle: 'RANGE  SENSOR  COMMS',
+    position: [1.58, 1.7, -4.79],
+    size: [1.18, 0.17],
+    align: 'center',
+    accent: '#72a69f',
   });
 
-  // Rows of guarded switches and annunciators are intentionally non-interactive in this slice.
-  const annunciatorMaterials = [materials.amberGlow, materials.greenGlow, materials.redGlow];
-  for (let index = 0; index < 16; index += 1) {
-    const x = -2.18 + index * 0.29;
+  // Six subdued standby instruments and one deliberate annunciator rail.
+  [-2.32, -2.02, -0.32, 0.32, 2.02, 2.32].forEach((x, index) => {
+    cylinder(cockpit, [0.112, 0.112], 0.055, [x, 0.94, -4.77], materials.rubber, [Math.PI / 2, 0, 0], 24, false);
+    cylinder(
+      cockpit,
+      [0.076, 0.076],
+      0.058,
+      [x, 0.94, -4.73],
+      index === 3 ? cockpitGreen : cockpitAmber,
+      [Math.PI / 2, 0, 0],
+      24,
+      false,
+    );
+  });
+  const indicatorMaterials = [cockpitAmber, cockpitGreen, cockpitAmber, cockpitAmber, cockpitRed];
+  for (let index = 0; index < 11; index += 1) {
     box(
       cockpit,
-      [0.12, 0.045, 0.1],
-      [x, 0.9 + (index % 2) * 0.07, -4.05],
-      annunciatorMaterials[index % 7 === 0 ? 2 : index % 3 === 0 ? 1 : 0],
-      [-10 * DEG, 0, 0],
-      0.018,
+      [0.13, 0.035, 0.075],
+      [-0.72 + index * 0.145, 0.98, -4.08],
+      indicatorMaterials[index % indicatorMaterials.length],
+      [0, 0, 0],
+      0.014,
       false,
     );
   }
 
-  const pilotSeat = createSeat(materials);
+  // Side wings wrap toward the seats and make the station feel built-in rather than freestanding.
+  box(cockpit, [0.72, 0.7, 1.8], [-2.72, 0.52, -4.04], materials.darkPaint, [0, 7 * DEG, 0], 0.09);
+  box(cockpit, [0.72, 0.7, 1.8], [2.72, 0.52, -4.04], materials.darkPaint, [0, -7 * DEG, 0], 0.09);
+  box(cockpit, [0.54, 0.07, 1.48], [-2.72, 0.91, -3.95], materials.bareMetal, [0, 7 * DEG, 0], 0.035);
+  box(cockpit, [0.54, 0.07, 1.48], [2.72, 0.91, -3.95], materials.bareMetal, [0, -7 * DEG, 0], 0.035);
+
+  // A proper centre pedestal sits between the seats, with guarded visual-only levers.
+  box(cockpit, [0.64, 0.66, 1.36], [0, 0.5, -3.68], materials.darkPaint, [-3 * DEG, 0, 0], 0.075);
+  box(cockpit, [0.59, 0.09, 1.2], [0, 0.86, -3.7], materials.bareMetal, [-3 * DEG, 0, 0], 0.035);
+  [-0.17, 0, 0.17].forEach((x, index) => {
+    cylinder(cockpit, [0.024, 0.024], 0.36, [x, 1.03, -3.9 + index * 0.13], materials.bareMetal, [0, 0, (index - 1) * 7 * DEG], 10);
+    box(cockpit, [0.1, 0.1, 0.16], [x, 1.22, -3.9 + index * 0.13], index === 2 ? cockpitRed : materials.rubber, [0, 0, 0], 0.035);
+  });
+  for (let index = 0; index < 6; index += 1) {
+    cylinder(cockpit, [0.035, 0.035], 0.035, [-0.22 + index * 0.088, 0.94, -3.37], index === 0 ? cockpitGreen : cockpitAmber, [0, 0, 0], 12, false);
+  }
+
+  const pilotSeat = createFlightSeat(materials, '01');
   pilotSeat.name = 'Port flight seat';
-  pilotSeat.position.set(-1.15, 0, -3.42);
-  pilotSeat.rotation.y = -2 * DEG;
+  pilotSeat.position.set(-1.28, 0, -3.02);
+  pilotSeat.rotation.y = -1.5 * DEG;
   cockpit.add(pilotSeat);
-  const emptyNavigatorSeat = createSeat(materials);
+  const emptyNavigatorSeat = createFlightSeat(materials, '02');
   emptyNavigatorSeat.name = 'Starboard navigation seat';
-  emptyNavigatorSeat.position.set(1.15, 0, -3.42);
-  emptyNavigatorSeat.rotation.y = 2 * DEG;
+  emptyNavigatorSeat.position.set(1.28, 0, -3.02);
+  emptyNavigatorSeat.rotation.y = 1.5 * DEG;
   cockpit.add(emptyNavigatorSeat);
 
-  // Two chunky mechanical yokes, each aligned with its seat and the forward view.
-  [-1.15, 1.15].forEach((x) => {
-    cylinder(cockpit, [0.055, 0.072], 0.48, [x, 0.62, -4.02], materials.bareMetal, [60 * DEG, 0, 0], 12);
-    cylinder(cockpit, [0.12, 0.12], 0.09, [x, 0.82, -3.88], materials.rubber, [Math.PI / 2, 0, 0], 18);
-    box(cockpit, [0.52, 0.075, 0.075], [x, 0.82, -3.84], materials.bareMetal, [0, 0, 0], 0.025);
-    box(cockpit, [0.1, 0.24, 0.105], [x - 0.24, 0.76, -3.82], materials.rubber, [0, 0, -8 * DEG], 0.035);
-    box(cockpit, [0.1, 0.24, 0.105], [x + 0.24, 0.76, -3.82], materials.rubber, [0, 0, 8 * DEG], 0.035);
+  // Compact hand controllers and foot pedals imply function without defining gameplay.
+  [-1.74, 1.74].forEach((x, index) => {
+    cylinder(cockpit, [0.09, 0.12], 0.1, [x, 0.75, -3.62], materials.rubber, [0, 0, 0], 16);
+    cylinder(cockpit, [0.032, 0.032], 0.34, [x, 0.96, -3.62], materials.bareMetal, [0, 0, (index ? -7 : 7) * DEG], 10);
+    box(cockpit, [0.12, 0.24, 0.13], [x + (index ? 0.035 : -0.035), 1.15, -3.62], materials.rubber, [0, 0, (index ? -7 : 7) * DEG], 0.045);
+    [-0.19, 0.19].forEach((offset) => {
+      box(cockpit, [0.25, 0.06, 0.38], [x + offset, 0.13, -4.18], materials.rubber, [-12 * DEG, 0, 0], 0.035);
+    });
   });
 
-  // Central throttle quadrant and guarded lever bank.
-  box(cockpit, [0.55, 0.22, 0.72], [0, 0.67, -3.85], materials.darkPaint, [-7 * DEG, 0, 0], 0.07);
-  [-0.13, 0.13].forEach((x, index) => {
-    cylinder(cockpit, [0.027, 0.027], 0.34, [x, 0.91, -3.88], materials.bareMetal, [index ? -18 * DEG : -10 * DEG, 0, 0], 10);
-    box(cockpit, [0.12, 0.09, 0.16], [x, 1.08, -3.93 - index * 0.04], materials.rubber, [0, 0, 0], 0.035);
-  });
-  box(cockpit, [0.34, 0.04, 0.08], [0, 0.84, -3.48], materials.redGlow, [0, 0, 0], 0.02, false);
-
-  addLabel(cockpit, {
-    title: 'FLIGHT / PORT',
-    subtitle: 'GUIDANCE / ATTITUDE / TRIM',
-    position: [-1.18, 1.33, -4.92],
-    rotation: [0, 0, 0],
-    size: [0.76, 0.2],
-  });
-  addLabel(cockpit, {
-    title: 'NAV / STARBOARD',
-    subtitle: 'RANGE / SURVEY / COMMS',
-    position: [1.18, 1.33, -4.92],
-    rotation: [0, 0, 0],
-    size: [0.76, 0.2],
-    accent: '#72b8ae',
-  });
+  // Warm under-glare practicals light the controls without turning the bridge into RGB décor.
+  box(cockpit, [1.52, 0.035, 0.055], [-1.58, 1.82, -4.73], cockpitAmber, [0, 0, 0], 0.015, false);
+  box(cockpit, [1.52, 0.035, 0.055], [1.58, 1.82, -4.73], cockpitAmber, [0, 0, 0], 0.015, false);
 
   // Observation lounge with worn couch, table, physical radio, and personal effects.
   const lounge = new THREE.Group();
