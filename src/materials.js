@@ -114,10 +114,11 @@ export function makeScreenTexture(seed = 1, mode = 'nav') {
   function draw(time = 0) {
     const width = canvas.width;
     const height = canvas.height;
-    context.fillStyle = mode === 'amber' ? '#160d08' : '#061417';
+    const warmMode = mode === 'amber' || mode === 'systems';
+    context.fillStyle = warmMode ? '#160d08' : '#061417';
     context.fillRect(0, 0, width, height);
 
-    const gridColor = mode === 'amber' ? 'rgba(221,130,72,.12)' : 'rgba(91,211,204,.11)';
+    const gridColor = warmMode ? 'rgba(221,130,72,.12)' : 'rgba(91,211,204,.11)';
     context.strokeStyle = gridColor;
     context.lineWidth = 1;
     for (let x = 0; x <= width; x += 48) {
@@ -133,13 +134,47 @@ export function makeScreenTexture(seed = 1, mode = 'nav') {
       context.stroke();
     }
 
-    const primary = mode === 'amber' ? '#db8751' : '#6fd8d1';
-    const soft = mode === 'amber' ? 'rgba(219,135,81,.34)' : 'rgba(111,216,209,.34)';
+    const primary = warmMode ? '#db8751' : '#6fd8d1';
+    const soft = warmMode ? 'rgba(219,135,81,.34)' : 'rgba(111,216,209,.34)';
     context.strokeStyle = primary;
     context.fillStyle = soft;
     context.lineWidth = 3;
 
-    if (mode === 'nav') {
+    if (mode === 'attitude') {
+      const cx = width * 0.5;
+      const cy = height * 0.52;
+      context.save();
+      context.translate(cx, cy);
+      context.rotate(-0.08 + Math.sin(time * 0.00015) * 0.015);
+      context.beginPath();
+      context.moveTo(-220, 0);
+      context.lineTo(220, 0);
+      context.stroke();
+      for (let rung = -3; rung <= 3; rung += 1) {
+        if (rung === 0) continue;
+        const y = rung * 34;
+        const span = 92 - Math.abs(rung) * 7;
+        context.beginPath();
+        context.moveTo(-span, y);
+        context.lineTo(span, y);
+        context.stroke();
+      }
+      context.restore();
+      context.lineWidth = 5;
+      context.beginPath();
+      context.moveTo(width * 0.35, cy);
+      context.lineTo(width * 0.45, cy);
+      context.lineTo(width * 0.5, cy + 22);
+      context.lineTo(width * 0.55, cy);
+      context.lineTo(width * 0.65, cy);
+      context.stroke();
+      context.lineWidth = 3;
+      [0.22, 0.78].forEach((x) => {
+        context.beginPath();
+        context.arc(width * x, cy, 48, -Math.PI * 0.65, Math.PI * 0.65);
+        context.stroke();
+      });
+    } else if (mode === 'nav') {
       const cx = width * 0.48;
       const cy = height * 0.53;
       for (let ring = 1; ring < 5; ring += 1) {
@@ -154,6 +189,25 @@ export function makeScreenTexture(seed = 1, mode = 'nav') {
       context.beginPath();
       context.arc(cx + Math.sin(time * 0.0004) * 116, cy - 15, 8, 0, Math.PI * 2);
       context.fill();
+    } else if (mode === 'systems') {
+      context.strokeRect(52, 78, 275, 205);
+      context.strokeRect(372, 78, 340, 205);
+      for (let line = 0; line < 4; line += 1) {
+        const y = 112 + line * 45;
+        context.beginPath();
+        context.moveTo(82, y);
+        context.lineTo(295, y);
+        context.stroke();
+        const value = 0.48 + Math.sin(time * 0.0004 + line * 1.7) * 0.16;
+        context.fillRect(405, y - 9, 245 * value, 14);
+      }
+      context.beginPath();
+      context.moveTo(118, 242);
+      context.lineTo(118, 128);
+      context.lineTo(190, 96);
+      context.lineTo(262, 128);
+      context.lineTo(262, 242);
+      context.stroke();
     } else {
       context.beginPath();
       for (let x = 0; x < width; x += 6) {
@@ -172,10 +226,16 @@ export function makeScreenTexture(seed = 1, mode = 'nav') {
 
     context.fillStyle = primary;
     context.font = '600 22px monospace';
-    context.fillText(mode === 'nav' ? 'DRIFT SOLUTION / L-07' : 'CABIN SYSTEMS / NOMINAL', 28, 37);
+    const headings = {
+      attitude: 'ATTITUDE / INERTIAL REFERENCE',
+      nav: 'NAVIGATION / DEEP RANGE',
+      systems: 'SHIP SYSTEMS / STANDBY',
+      amber: 'SYSTEM MONITOR / NOMINAL',
+    };
+    context.fillText(headings[mode] || headings.nav, 28, 37);
     context.fillStyle = 'rgba(224,235,225,.55)';
     context.font = '500 14px monospace';
-    context.fillText('LOCAL  14:07:31    RANGE  8.24E+16 KM', 29, height - 24);
+    context.fillText('REFERENCE STABLE    ARRAY SYNCHRONIZED', 29, height - 24);
     texture.needsUpdate = true;
   }
 
