@@ -37,7 +37,7 @@ The Ship Systems panel controls turning mode, walking speed, ship ambience, and 
 
 ## Meta Quest / WebXR
 
-WebXR requires a secure context. The included GitHub Pages workflow builds and publishes the project over HTTPS after it reaches `main` (or when manually dispatched). Open that Pages URL in Meta Quest Browser and choose **Enter VR**.
+WebXR requires a secure context. Before the first deployment, set **Settings → Pages → Build and deployment → Source** to **GitHub Actions** once. The included workflow then builds and publishes the project over HTTPS after it reaches `main` (or when manually dispatched). Open that Pages URL in Meta Quest Browser and choose **Enter VR**.
 
 Quest Touch controls:
 
