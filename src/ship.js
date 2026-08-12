@@ -163,30 +163,30 @@ function addScreen(parent, {
 
 function createFlightSeat(materials, station) {
   const seat = new THREE.Group();
-  cylinder(seat, [0.18, 0.23], 0.34, [0, 0.2, 0.08], materials.bareMetal, [0, 0, 0], 16);
-  box(seat, [0.66, 0.14, 0.6], [0, 0.4, 0.06], materials.darkPaint, [0, 0, 0], 0.08);
-  box(seat, [0.72, 0.2, 0.76], [0, 0.56, -0.02], materials.fabric, [-6 * DEG, 0, 0], 0.13);
+  // A light, human-scale aviation seat: about 55 cm wide, with a thin tubular
+  // frame and separate cushions instead of a single oversized throne shape.
+  cylinder(seat, [0.105, 0.14], 0.27, [0, 0.15, 0.08], materials.bareMetal, [0, 0, 0], 14);
+  box(seat, [0.5, 0.07, 0.46], [0, 0.31, 0.04], materials.darkPaint, [0, 0, 0], 0.035);
+  box(seat, [0.52, 0.11, 0.49], [0, 0.4, -0.02], materials.fabric, [-5 * DEG, 0, 0], 0.065);
 
-  // Hard rear shell and exposed frame make the seats convincing from the entry.
-  box(seat, [0.86, 1.16, 0.16], [0, 1.12, 0.36], materials.darkPaint, [-9 * DEG, 0, 0], 0.11);
-  box(seat, [0.65, 0.86, 0.15], [0, 1.08, 0.22], materials.fabric, [-9 * DEG, 0, 0], 0.1);
-  box(seat, [0.17, 0.9, 0.22], [-0.37, 1.08, 0.26], materials.rubber, [-9 * DEG, 0, -2 * DEG], 0.07);
-  box(seat, [0.17, 0.9, 0.22], [0.37, 1.08, 0.26], materials.rubber, [-9 * DEG, 0, 2 * DEG], 0.07);
-  box(seat, [0.5, 0.25, 0.19], [0, 1.7, 0.43], materials.fabric, [-7 * DEG, 0, 0], 0.09);
-  cylinder(seat, [0.035, 0.035], 1.12, [-0.46, 0.95, 0.42], materials.bareMetal, [0, 0, 0], 10);
-  cylinder(seat, [0.035, 0.035], 1.12, [0.46, 0.95, 0.42], materials.bareMetal, [0, 0, 0], 10);
+  box(seat, [0.57, 0.79, 0.085], [0, 0.87, 0.28], materials.darkPaint, [-9 * DEG, 0, 0], 0.045);
+  box(seat, [0.47, 0.64, 0.075], [0, 0.86, 0.205], materials.fabric, [-9 * DEG, 0, 0], 0.045);
+  box(seat, [0.045, 0.61, 0.08], [-0.265, 0.86, 0.2], materials.rubber, [-9 * DEG, 0, -1 * DEG], 0.018);
+  box(seat, [0.045, 0.61, 0.08], [0.265, 0.86, 0.2], materials.rubber, [-9 * DEG, 0, 1 * DEG], 0.018);
+  box(seat, [0.31, 0.13, 0.09], [0, 1.34, 0.35], materials.fabric, [-7 * DEG, 0, 0], 0.045);
+  cylinder(seat, [0.018, 0.018], 0.79, [-0.33, 0.76, 0.34], materials.bareMetal, [0, 0, 0], 8);
+  cylinder(seat, [0.018, 0.018], 0.79, [0.33, 0.76, 0.34], materials.bareMetal, [0, 0, 0], 8);
 
-  // Armrests sit slightly forward of the shell and frame the occupant without looking oversized.
-  box(seat, [0.15, 0.13, 0.52], [-0.48, 0.76, -0.03], materials.rubber, [0, 0, 0], 0.055);
-  box(seat, [0.15, 0.13, 0.52], [0.48, 0.76, -0.03], materials.rubber, [0, 0, 0], 0.055);
-  box(seat, [0.1, 0.34, 0.1], [-0.48, 0.57, 0.17], materials.bareMetal, [0, 0, 0], 0.03);
-  box(seat, [0.1, 0.34, 0.1], [0.48, 0.57, 0.17], materials.bareMetal, [0, 0, 0], 0.03);
+  box(seat, [0.065, 0.065, 0.34], [-0.35, 0.61, -0.02], materials.rubber, [0, 0, 0], 0.025);
+  box(seat, [0.065, 0.065, 0.34], [0.35, 0.61, -0.02], materials.rubber, [0, 0, 0], 0.025);
+  box(seat, [0.035, 0.22, 0.035], [-0.35, 0.48, 0.12], materials.bareMetal, [0, 0, 0], 0.012);
+  box(seat, [0.035, 0.22, 0.035], [0.35, 0.48, 0.12], materials.bareMetal, [0, 0, 0], 0.012);
 
   addLabel(seat, {
     title: station,
     subtitle: 'FLIGHT SEAT',
-    position: [0, 1.15, 0.455],
-    size: [0.42, 0.15],
+    position: [0, 0.91, 0.331],
+    size: [0.24, 0.075],
     align: 'center',
     accent: '#aa714f',
   });
@@ -406,41 +406,41 @@ export function createShip(materials) {
   const cockpitRed = materials.redGlow.clone();
   cockpitRed.emissiveIntensity = 1.55;
 
-  // One continuous dashboard gives the bridge a readable silhouette. The vertical
-  // instrument panel stops below eye height, preserving the nebula view above it.
-  box(cockpit, [5.76, 0.16, 0.96], [0, 0.12, -4.78], materials.rubber, [0, 0, 0], 0.06);
-  box(cockpit, [5.54, 0.72, 0.76], [0, 0.48, -4.92], materials.darkPaint, [0, 0, 0], 0.1);
-  box(cockpit, [5.5, 0.14, 1.08], [0, 0.88, -4.42], materials.darkPaint, [-5 * DEG, 0, 0], 0.07);
-  box(cockpit, [5.38, 0.9, 0.14], [0, 1.3, -4.9], materials.darkPaint, [0, 0, 0], 0.055);
-  box(cockpit, [5.48, 0.065, 0.19], [0, 1.78, -4.88], materials.bareMetal, [0, 0, 0], 0.02);
-  box(cockpit, [5.46, 0.07, 0.22], [0, 0.82, -4.83], materials.bareMetal, [0, 0, 0], 0.02);
-  [-2.68, -0.55, 0.55, 2.68].forEach((x) => {
-    box(cockpit, [0.055, 0.88, 0.18], [x, 1.3, -4.82], materials.bareMetal, [0, 0, 0], 0.015);
+  // Low, continuous dashboard with a shallow glare shield. It leaves the lower
+  // edge of the forward glazing visible and reads as fitted furniture, not a wall.
+  box(cockpit, [5.62, 0.11, 0.78], [0, 0.09, -4.82], materials.rubber, [0, 0, 0], 0.045);
+  box(cockpit, [5.4, 0.52, 0.64], [0, 0.38, -4.94], materials.darkPaint, [0, 0, 0], 0.065);
+  box(cockpit, [5.34, 0.085, 0.82], [0, 0.72, -4.54], materials.darkPaint, [-5 * DEG, 0, 0], 0.035);
+  box(cockpit, [5.2, 0.62, 0.095], [0, 1.08, -4.91], materials.darkPaint, [0, 0, 0], 0.035);
+  box(cockpit, [5.26, 0.035, 0.12], [0, 1.41, -4.88], materials.bareMetal, [0, 0, 0], 0.012);
+  box(cockpit, [5.24, 0.035, 0.13], [0, 0.75, -4.84], materials.bareMetal, [0, 0, 0], 0.012);
+  [-2.6, -0.52, 0.52, 2.6].forEach((x) => {
+    box(cockpit, [0.035, 0.62, 0.12], [x, 1.08, -4.84], materials.bareMetal, [0, 0, 0], 0.01);
   });
 
-  // Three coherent display clusters replace the floating, intersecting screen pile.
+  // Three modest display clusters sit inside the panel instead of dominating it.
   addScreen(cockpit, {
-    position: [-1.58, 1.34, -4.79],
+    position: [-1.38, 1.1, -4.82],
     rotation: [-4 * DEG, 0, 0],
-    size: [1.48, 0.56],
+    size: [1.03, 0.38],
     seed: 2,
     mode: 'nav',
     materials,
     screenAnimations,
   });
   addScreen(cockpit, {
-    position: [0, 1.34, -4.78],
+    position: [0, 1.1, -4.81],
     rotation: [-4 * DEG, 0, 0],
-    size: [0.62, 0.56],
+    size: [0.42, 0.38],
     seed: 3,
     mode: 'amber',
     materials,
     screenAnimations,
   });
   addScreen(cockpit, {
-    position: [1.58, 1.34, -4.79],
+    position: [1.38, 1.1, -4.82],
     rotation: [-4 * DEG, 0, 0],
-    size: [1.48, 0.56],
+    size: [1.03, 0.38],
     seed: 4,
     mode: 'amber',
     materials,
@@ -450,27 +450,27 @@ export function createShip(materials) {
   addLabel(cockpit, {
     title: 'PILOT / 01',
     subtitle: 'GUIDANCE  ATTITUDE  TRIM',
-    position: [-1.58, 1.7, -4.79],
-    size: [1.18, 0.17],
+    position: [-1.38, 1.35, -4.82],
+    size: [0.86, 0.11],
     align: 'center',
   });
   addLabel(cockpit, {
     title: 'SURVEY / 02',
     subtitle: 'RANGE  SENSOR  COMMS',
-    position: [1.58, 1.7, -4.79],
-    size: [1.18, 0.17],
+    position: [1.38, 1.35, -4.82],
+    size: [0.86, 0.11],
     align: 'center',
     accent: '#72a69f',
   });
 
-  // Six subdued standby instruments and one deliberate annunciator rail.
-  [-2.32, -2.02, -0.32, 0.32, 2.02, 2.32].forEach((x, index) => {
-    cylinder(cockpit, [0.112, 0.112], 0.055, [x, 0.94, -4.77], materials.rubber, [Math.PI / 2, 0, 0], 24, false);
+  // Small analogue standbys and fine annunciators provide believable density.
+  [-2.35, -2.18, -0.28, 0.28, 2.18, 2.35].forEach((x, index) => {
+    cylinder(cockpit, [0.045, 0.045], 0.024, [x, 1.08, -4.845], materials.rubber, [Math.PI / 2, 0, 0], 20, false);
     cylinder(
       cockpit,
-      [0.076, 0.076],
-      0.058,
-      [x, 0.94, -4.73],
+      [0.029, 0.029],
+      0.026,
+      [x, 1.08, -4.825],
       index === 3 ? cockpitGreen : cockpitAmber,
       [Math.PI / 2, 0, 0],
       24,
@@ -478,33 +478,33 @@ export function createShip(materials) {
     );
   });
   const indicatorMaterials = [cockpitAmber, cockpitGreen, cockpitAmber, cockpitAmber, cockpitRed];
-  for (let index = 0; index < 11; index += 1) {
+  for (let index = 0; index < 13; index += 1) {
     box(
       cockpit,
-      [0.13, 0.035, 0.075],
-      [-0.72 + index * 0.145, 0.98, -4.08],
+      [0.043, 0.018, 0.032],
+      [-0.39 + index * 0.065, 0.78, -4.16],
       indicatorMaterials[index % indicatorMaterials.length],
       [0, 0, 0],
-      0.014,
+      0.006,
       false,
     );
   }
 
   // Side wings wrap toward the seats and make the station feel built-in rather than freestanding.
-  box(cockpit, [0.72, 0.7, 1.8], [-2.72, 0.52, -4.04], materials.darkPaint, [0, 7 * DEG, 0], 0.09);
-  box(cockpit, [0.72, 0.7, 1.8], [2.72, 0.52, -4.04], materials.darkPaint, [0, -7 * DEG, 0], 0.09);
-  box(cockpit, [0.54, 0.07, 1.48], [-2.72, 0.91, -3.95], materials.bareMetal, [0, 7 * DEG, 0], 0.035);
-  box(cockpit, [0.54, 0.07, 1.48], [2.72, 0.91, -3.95], materials.bareMetal, [0, -7 * DEG, 0], 0.035);
+  box(cockpit, [0.48, 0.44, 1.42], [-2.76, 0.34, -4.08], materials.darkPaint, [0, 7 * DEG, 0], 0.055);
+  box(cockpit, [0.48, 0.44, 1.42], [2.76, 0.34, -4.08], materials.darkPaint, [0, -7 * DEG, 0], 0.055);
+  box(cockpit, [0.4, 0.045, 1.25], [-2.76, 0.59, -4.03], materials.bareMetal, [0, 7 * DEG, 0], 0.018);
+  box(cockpit, [0.4, 0.045, 1.25], [2.76, 0.59, -4.03], materials.bareMetal, [0, -7 * DEG, 0], 0.018);
 
   // A proper centre pedestal sits between the seats, with guarded visual-only levers.
-  box(cockpit, [0.64, 0.66, 1.36], [0, 0.5, -3.68], materials.darkPaint, [-3 * DEG, 0, 0], 0.075);
-  box(cockpit, [0.59, 0.09, 1.2], [0, 0.86, -3.7], materials.bareMetal, [-3 * DEG, 0, 0], 0.035);
-  [-0.17, 0, 0.17].forEach((x, index) => {
-    cylinder(cockpit, [0.024, 0.024], 0.36, [x, 1.03, -3.9 + index * 0.13], materials.bareMetal, [0, 0, (index - 1) * 7 * DEG], 10);
-    box(cockpit, [0.1, 0.1, 0.16], [x, 1.22, -3.9 + index * 0.13], index === 2 ? cockpitRed : materials.rubber, [0, 0, 0], 0.035);
+  box(cockpit, [0.44, 0.42, 1.05], [0, 0.31, -3.64], materials.darkPaint, [-3 * DEG, 0, 0], 0.045);
+  box(cockpit, [0.4, 0.045, 0.92], [0, 0.545, -3.66], materials.bareMetal, [-3 * DEG, 0, 0], 0.018);
+  [-0.105, 0, 0.105].forEach((x, index) => {
+    cylinder(cockpit, [0.011, 0.011], 0.18, [x, 0.65, -3.82 + index * 0.08], materials.bareMetal, [0, 0, (index - 1) * 6 * DEG], 8);
+    box(cockpit, [0.045, 0.038, 0.075], [x, 0.75, -3.82 + index * 0.08], index === 2 ? cockpitRed : materials.rubber, [0, 0, 0], 0.015);
   });
-  for (let index = 0; index < 6; index += 1) {
-    cylinder(cockpit, [0.035, 0.035], 0.035, [-0.22 + index * 0.088, 0.94, -3.37], index === 0 ? cockpitGreen : cockpitAmber, [0, 0, 0], 12, false);
+  for (let index = 0; index < 5; index += 1) {
+    cylinder(cockpit, [0.015, 0.015], 0.015, [-0.12 + index * 0.06, 0.58, -3.24], index === 0 ? cockpitGreen : cockpitAmber, [0, 0, 0], 10, false);
   }
 
   const pilotSeat = createFlightSeat(materials, '01');
@@ -518,19 +518,19 @@ export function createShip(materials) {
   emptyNavigatorSeat.rotation.y = 1.5 * DEG;
   cockpit.add(emptyNavigatorSeat);
 
-  // Compact hand controllers and foot pedals imply function without defining gameplay.
+  // Fine sidesticks and pedals are visual set dressing only.
   [-1.74, 1.74].forEach((x, index) => {
-    cylinder(cockpit, [0.09, 0.12], 0.1, [x, 0.75, -3.62], materials.rubber, [0, 0, 0], 16);
-    cylinder(cockpit, [0.032, 0.032], 0.34, [x, 0.96, -3.62], materials.bareMetal, [0, 0, (index ? -7 : 7) * DEG], 10);
-    box(cockpit, [0.12, 0.24, 0.13], [x + (index ? 0.035 : -0.035), 1.15, -3.62], materials.rubber, [0, 0, (index ? -7 : 7) * DEG], 0.045);
+    cylinder(cockpit, [0.045, 0.06], 0.04, [x, 0.59, -3.62], materials.rubber, [0, 0, 0], 14);
+    cylinder(cockpit, [0.013, 0.013], 0.18, [x, 0.69, -3.62], materials.bareMetal, [0, 0, (index ? -7 : 7) * DEG], 8);
+    box(cockpit, [0.055, 0.105, 0.055], [x + (index ? 0.018 : -0.018), 0.79, -3.62], materials.rubber, [0, 0, (index ? -7 : 7) * DEG], 0.018);
     [-0.19, 0.19].forEach((offset) => {
-      box(cockpit, [0.25, 0.06, 0.38], [x + offset, 0.13, -4.18], materials.rubber, [-12 * DEG, 0, 0], 0.035);
+      box(cockpit, [0.13, 0.035, 0.22], [x + offset * 0.62, 0.09, -4.18], materials.rubber, [-12 * DEG, 0, 0], 0.018);
     });
   });
 
   // Warm under-glare practicals light the controls without turning the bridge into RGB décor.
-  box(cockpit, [1.52, 0.035, 0.055], [-1.58, 1.82, -4.73], cockpitAmber, [0, 0, 0], 0.015, false);
-  box(cockpit, [1.52, 0.035, 0.055], [1.58, 1.82, -4.73], cockpitAmber, [0, 0, 0], 0.015, false);
+  box(cockpit, [1.08, 0.022, 0.035], [-1.38, 1.45, -4.82], cockpitAmber, [0, 0, 0], 0.008, false);
+  box(cockpit, [1.08, 0.022, 0.035], [1.38, 1.45, -4.82], cockpitAmber, [0, 0, 0], 0.008, false);
 
   // Observation lounge with worn couch, table, physical radio, and personal effects.
   const lounge = new THREE.Group();
