@@ -1,0 +1,20 @@
+{
+  "name": "lone-light-vr",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "check": "node --check src/main.js && node --check src/ship.js && node --check src/environment.js && node --check src/controls.js && node --check src/audio.js && vite build"
+  },
+  "dependencies": {
+    "@fontsource/barlow-condensed": "^5.3.0",
+    "@fontsource/chakra-petch": "^5.3.0",
+    "three": "0.185.1"
+  },
+  "devDependencies": {
+    "vite": "8.2.1"
+  }
+}
