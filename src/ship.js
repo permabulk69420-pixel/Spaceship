@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { makeLabelTexture, makeScreenTexture } from './materials.js';
 
 const DEG = Math.PI / 180;
@@ -281,22 +282,162 @@ function createJournal(materials) {
   return journal;
 }
 
-function addStorageCrate(parent, position, rotation, materials, marking = '07') {
-  const crate = new THREE.Group();
-  crate.position.set(...position);
-  crate.rotation.set(...rotation);
-  parent.add(crate);
-  box(crate, [0.68, 0.45, 0.48], [0, 0, 0], materials.darkPaint, [0, 0, 0], 0.055);
-  box(crate, [0.72, 0.045, 0.08], [0, 0.16, 0.25], materials.copper, [0, 0, 0], 0.01);
-  box(crate, [0.72, 0.045, 0.08], [0, -0.16, 0.25], materials.copper, [0, 0, 0], 0.01);
-  addLabel(crate, {
-    title: marking,
-    subtitle: 'DRY STORE',
-    position: [0, 0, 0.246],
-    size: [0.27, 0.11],
-    align: 'center',
-  });
-  return crate;
+function addBooks(parent, position, rotation, materials, count = 6) {
+  const books = new THREE.Group();
+  books.position.set(...position);
+  books.rotation.set(...rotation);
+  parent.add(books);
+  const covers = [materials.blanket, materials.fabric, materials.darkPaint, materials.copper, materials.linen];
+  let cursor = 0;
+  for (let index = 0; index < count; index += 1) {
+    const width = 0.028 + (index % 3) * 0.008;
+    const height = 0.16 + (index % 4) * 0.018;
+    box(
+      books,
+      [width, height, 0.115],
+      [cursor + width / 2, height / 2, 0],
+      covers[index % covers.length],
+      [0, 0, (index % 3 - 1) * 1.6 * DEG],
+      0.006,
+      false,
+    );
+    cursor += width + 0.008;
+  }
+  return books;
+}
+
+function addPhotoFrame(parent, position, rotation, materials, accent = 'warm') {
+  const photo = new THREE.Group();
+  photo.position.set(...position);
+  photo.rotation.set(...rotation);
+  parent.add(photo);
+  box(photo, [0.23, 0.17, 0.018], [0, 0, 0], materials.wood, [0, 0, 0], 0.012, false);
+  box(
+    photo,
+    [0.19, 0.13, 0.008],
+    [0, 0, -0.014],
+    accent === 'cool' ? materials.screen : materials.linen,
+    [0, 0, 0],
+    0.005,
+    false,
+  );
+  box(photo, [0.07, 0.04, 0.006], [-0.035, 0.012, -0.02], materials.darkPaint, [0, 0, 8 * DEG], 0.01, false);
+  box(photo, [0.05, 0.055, 0.006], [0.045, -0.014, -0.021], materials.fabric, [0, 0, -6 * DEG], 0.01, false);
+  return photo;
+}
+
+function createPottedPlant(materials) {
+  const plant = new THREE.Group();
+  cylinder(plant, [0.105, 0.075], 0.16, [0, 0.08, 0], materials.ceramic, [0, 0, 0], 18);
+  cylinder(plant, [0.082, 0.082], 0.018, [0, 0.165, 0], materials.darkPaint, [0, 0, 0], 18, false);
+  for (let index = 0; index < 8; index += 1) {
+    const angle = (index / 8) * Math.PI * 2;
+    const reach = 0.08 + (index % 3) * 0.025;
+    tube(
+      plant,
+      [
+        [0, 0.17, 0],
+        [Math.cos(angle) * reach * 0.4, 0.24 + (index % 2) * 0.035, Math.sin(angle) * reach * 0.4],
+        [Math.cos(angle) * reach, 0.29 + (index % 3) * 0.045, Math.sin(angle) * reach],
+      ],
+      0.006,
+      materials.foliage,
+      false,
+      9,
+    );
+    box(
+      plant,
+      [0.05, 0.012, 0.115],
+      [Math.cos(angle) * reach, 0.3 + (index % 3) * 0.045, Math.sin(angle) * reach],
+      materials.foliage,
+      [0.1, -angle, (index % 2 ? -18 : 18) * DEG],
+      0.006,
+      false,
+    );
+  }
+  return plant;
+}
+
+function createEVAHelmet(materials) {
+  const helmet = new THREE.Group();
+  const shell = new THREE.Mesh(
+    new THREE.SphereGeometry(0.19, 20, 14, 0, Math.PI * 2, 0.12, Math.PI * 0.8),
+    materials.ceramic,
+  );
+  shell.scale.set(1, 0.92, 0.94);
+  shell.castShadow = true;
+  helmet.add(shell);
+  const visor = new THREE.Mesh(
+    new THREE.SphereGeometry(0.165, 20, 12, -1.0, 2.0, 0.6, 1.25),
+    materials.darkGlass,
+  );
+  visor.position.set(0, 0.005, -0.045);
+  visor.scale.set(0.95, 0.78, 1.02);
+  visor.castShadow = false;
+  helmet.add(visor);
+  const neck = new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.025, 8, 24), materials.bareMetal);
+  neck.rotation.x = Math.PI / 2;
+  neck.position.y = -0.16;
+  helmet.add(neck);
+  box(helmet, [0.075, 0.045, 0.035], [0.145, -0.055, -0.13], materials.redGlow, [0, 12 * DEG, 0], 0.01, false);
+  return helmet;
+}
+
+function batchStaticMeshes(root, { recursive = true, name = 'Static interior batch' } = {}) {
+  root.updateWorldMatrix(true, true);
+  const inverseRoot = root.matrixWorld.clone().invert();
+  const batches = new Map();
+
+  function collect(object, blocked = false) {
+    const protectedBranch = blocked
+      || object.userData.dynamic
+      || object.userData.grabbable
+      || object.userData.interactable;
+
+    if (object.isMesh) {
+      const protectedMesh = protectedBranch
+        || object.isInstancedMesh
+        || object.name
+        || object.userData.isLabel
+        || object.userData.screenMode
+        || object.userData.outerDoor
+        || object.material?.transparent
+        || Array.isArray(object.material)
+        || !object.geometry;
+      if (!protectedMesh) {
+        const relativeMatrix = inverseRoot.clone().multiply(object.matrixWorld);
+        let geometry = object.geometry.clone();
+        if (geometry.index) geometry = geometry.toNonIndexed();
+        geometry.applyMatrix4(relativeMatrix);
+        const key = object.material.uuid;
+        if (!batches.has(key)) batches.set(key, { material: object.material, entries: [] });
+        batches.get(key).entries.push({ object, geometry });
+      }
+    }
+
+    if (!recursive && object === root) {
+      object.children.forEach((child) => {
+        if (child.isMesh) collect(child, protectedBranch);
+      });
+      return;
+    }
+    if (recursive) object.children.forEach((child) => collect(child, protectedBranch));
+  }
+
+  collect(root);
+  let batchIndex = 0;
+  for (const { material, entries } of batches.values()) {
+    if (entries.length < 2) continue;
+    const merged = mergeGeometries(entries.map((entry) => entry.geometry), false);
+    if (!merged) continue;
+    const mesh = new THREE.Mesh(merged, material);
+    mesh.name = `${name} ${batchIndex + 1}`;
+    mesh.castShadow = entries.some((entry) => entry.object.castShadow);
+    mesh.receiveShadow = entries.some((entry) => entry.object.receiveShadow);
+    root.add(mesh);
+    entries.forEach((entry) => entry.object.removeFromParent());
+    batchIndex += 1;
+  }
 }
 
 function createControlButton(parent, position, rotation, materials, label) {
@@ -727,133 +868,377 @@ export function createShip(materials) {
   instrumentFill.position.set(0, 1.25, -4.05);
   cockpit.add(instrumentFill);
 
-  // Observation lounge with worn couch, table, physical radio, and personal effects.
+  // HABITATION / OBSERVATION. The first room behind the flight deck is a warm
+  // common room arranged around the panoramic starboard window.
   const lounge = new THREE.Group();
-  lounge.position.set(-0.72, 0, -5.1);
+  lounge.name = 'Observation lounge';
   ship.add(lounge);
-  box(lounge, [0.68, 0.22, 2.15], [-2.02, 0.43, 0.35], materials.fabric, [0, 0, 0], 0.12);
-  box(lounge, [0.2, 0.78, 2.15], [-2.38, 0.77, 0.35], materials.fabric, [0, 0, -4 * DEG], 0.11);
-  box(lounge, [0.7, 0.18, 0.2], [-2.0, 0.56, -0.7], materials.fabric, [0, 0, 0], 0.07);
-  box(lounge, [0.7, 0.18, 0.2], [-2.0, 0.56, 1.4], materials.fabric, [0, 0, 0], 0.07);
-  box(lounge, [0.76, 0.055, 0.92], [-0.82, 0.63, 0.15], materials.darkPaint, [0, 0, 0], 0.045);
-  cylinder(lounge, [0.05, 0.05], 0.58, [-0.82, 0.31, 0.15], materials.bareMetal, [0, 0, 0], 10);
-  box(lounge, [1.28, 0.028, 2.8], [0.25, 0.025, 0.15], materials.blanket, [0, 0, 0], 0.02, false);
+  box(lounge, [2.25, 0.025, 3.55], [-1.55, 0.024, -6.75], materials.blanket, [0, 0, 0], 0.035, false);
+  box(lounge, [0.8, 0.18, 2.55], [-2.82, 0.35, -6.65], materials.darkPaint, [0, 0, 0], 0.09);
+  box(lounge, [0.17, 0.72, 2.48], [-3.16, 0.73, -6.65], materials.fabric, [0, 0, -4 * DEG], 0.08);
+  [-7.38, -6.62, -5.86].forEach((z, index) => {
+    box(lounge, [0.68, 0.13, 0.67], [-2.76, 0.51, z], index === 1 ? materials.linen : materials.fabric, [0, 0, 0], 0.075);
+  });
+  [-7.98, -5.28].forEach((z) => {
+    box(lounge, [0.76, 0.18, 0.19], [-2.8, 0.55, z], materials.fabric, [0, 0, 0], 0.065);
+  });
+  box(lounge, [0.52, 0.035, 0.92], [-2.58, 0.6, -7.02], materials.blanket, [0, 0, -3 * DEG], 0.025, false);
 
+  // A low wood-topped table keeps the window and forward sightline open.
+  box(lounge, [0.78, 0.055, 1.08], [-1.55, 0.51, -6.55], materials.wood, [0, 0, 0], 0.045);
+  [-1.82, -1.28].forEach((x) => {
+    [-6.93, -6.17].forEach((z) => {
+      cylinder(lounge, [0.022, 0.022], 0.46, [x, 0.27, z], materials.bareMetal, [0, 0, 0], 8);
+    });
+  });
   const mug = createMug(materials);
-  mug.position.set(-0.67, 0.75, 0.05);
+  mug.position.set(-1.72, 0.64, -6.72);
   lounge.add(mug);
   grabbables.push(mug);
   const journal = createJournal(materials);
-  journal.position.set(-0.94, 0.69, 0.35);
+  journal.position.set(-1.42, 0.57, -6.35);
   journal.rotation.y = 11 * DEG;
   lounge.add(journal);
   grabbables.push(journal);
 
+  // The window sill doubles as a perch; its top ends exactly below the glass.
+  box(lounge, [0.48, 0.18, 4.72], [3.25, 0.48, -7.78], materials.darkPaint, [0, 0, 0], 0.055);
+  [-9.15, -7.78, -6.41].forEach((z) => {
+    box(lounge, [0.42, 0.09, 1.14], [3.18, 0.61, z], materials.fabric, [0, 0, 0], 0.055);
+  });
+  box(lounge, [0.035, 0.035, 4.55], [2.99, 0.73, -7.78], materials.bareMetal, [0, 0, 0], 0.01);
+
+  // Books, photographs and one living plant turn the bay into somebody's room.
+  box(lounge, [0.28, 0.055, 1.42], [-3.28, 1.58, -5.35], materials.wood, [0, 0, 0], 0.018);
+  box(lounge, [0.28, 0.055, 1.42], [-3.28, 1.98, -5.35], materials.wood, [0, 0, 0], 0.018);
+  addBooks(lounge, [-3.16, 1.61, -5.82], [0, -Math.PI / 2, 0], materials, 8);
+  addBooks(lounge, [-3.16, 2.01, -5.15], [0, -Math.PI / 2, 0], materials, 5);
+  addPhotoFrame(lounge, [-3.4, 1.2, -7.72], [0, Math.PI / 2, 0], materials, 'warm');
+  addPhotoFrame(lounge, [-3.4, 1.53, -7.45], [0, Math.PI / 2, 0], materials, 'cool');
+  const loungePlant = createPottedPlant(materials);
+  loungePlant.position.set(-3.0, 0.72, -5.05);
+  lounge.add(loungePlant);
+
+  // Physical radio remains a source in the room rather than an abstract soundtrack.
   const radio = new THREE.Group();
-  radio.position.set(-2.18, 1.36, 1.22);
-  radio.rotation.y = Math.PI / 2;
+  radio.position.set(-3.13, 1.12, -5.42);
+  radio.rotation.y = -Math.PI / 2;
   lounge.add(radio);
-  box(radio, [0.62, 0.38, 0.25], [0, 0, 0], materials.darkPaint, [0, 0, 0], 0.055);
-  cylinder(radio, [0.11, 0.11], 0.025, [-0.16, 0, -0.138], materials.rubber, [Math.PI / 2, 0, 0], 20, false);
+  box(radio, [0.54, 0.3, 0.21], [0, 0, 0], materials.darkPaint, [0, 0, 0], 0.045);
+  cylinder(radio, [0.082, 0.082], 0.021, [-0.14, 0, -0.117], materials.rubber, [Math.PI / 2, 0, 0], 20, false);
   for (let index = -2; index <= 2; index += 1) {
-    box(radio, [0.018, 0.17, 0.025], [-0.16 + index * 0.032, 0, -0.158], materials.bareMetal, [0, 0, 0], 0, false);
+    box(radio, [0.014, 0.13, 0.018], [-0.14 + index * 0.026, 0, -0.13], materials.bareMetal, [0, 0, 0], 0, false);
   }
-  box(radio, [0.22, 0.11, 0.025], [0.13, 0.04, -0.158], materials.screen, [0, 0, 0], 0.01, false);
-  const radioButton = createControlButton(radio, [0.23, -0.1, -0.16], [Math.PI / 2, 0, 0], materials, 'SHIP RADIO');
+  box(radio, [0.18, 0.075, 0.018], [0.11, 0.035, -0.13], materials.screen, [0, 0, 0], 0.008, false);
+  const radioButton = createControlButton(radio, [0.19, -0.075, -0.14], [Math.PI / 2, 0, 0], materials, 'SHIP RADIO');
   interactables.push(radioButton);
   const radioAnchor = new THREE.Object3D();
-  radioAnchor.position.set(-0.16, 0, -0.2);
+  radioAnchor.position.set(-0.13, 0, -0.18);
   radio.add(radioAnchor);
 
-  // Bunk nook: soft material, small window, reading light, shelf, photographs.
-  const bunk = new THREE.Group();
-  bunk.position.set(-0.82, 0, 2.1);
-  ship.add(bunk);
-  box(bunk, [1.22, 0.16, 2.25], [-1.82, 0.43, 3.48], materials.darkPaint, [0, 0, 0], 0.06);
-  box(bunk, [1.12, 0.15, 2.1], [-1.82, 0.57, 3.48], materials.fabric, [0, 0, 0], 0.11);
-  box(bunk, [0.86, 0.055, 1.25], [-1.76, 0.66, 3.78], materials.blanket, [0, 0, -2 * DEG], 0.035);
-  box(bunk, [0.5, 0.14, 0.34], [-1.83, 0.71, 2.72], materials.creamPaint, [0, 0, 0], 0.09);
-  box(bunk, [1.1, 0.08, 0.28], [-1.85, 1.96, 3.92], materials.darkPaint, [0, 0, 0], 0.025);
-  box(bunk, [0.28, 0.32, 0.21], [-2.32, 1.38, 2.68], materials.darkPaint, [0, 0, 0], 0.035);
-  box(bunk, [0.13, 0.035, 0.1], [-2.19, 1.42, 2.68], materials.amberGlow, [0, 0, 0], 0.025, false);
-  const readingLight = new THREE.PointLight(0xffa86d, 8, 2.2, 2);
-  readingLight.position.set(-2.05, 1.36, 2.68);
-  bunk.add(readingLight);
-
-  addLabel(bunk, {
-    title: 'LRSV-07',
-    subtitle: 'THE DISTANCE IS THE MISSION',
-    position: [-2.467, 1.0, 2.5],
+  addLabel(lounge, {
+    title: 'COMMON / OBSERVATION',
+    subtitle: 'STARBOARD VIEWING BAY',
+    position: [-3.48, 2.28, -6.72],
     rotation: [0, Math.PI / 2, 0],
-    size: [0.72, 0.23],
+    size: [0.72, 0.16],
   });
-  addLabel(bunk, {
-    title: '1419',
-    subtitle: 'DAYS OUTBOUND',
-    position: [-2.466, 1.88, 4.25],
-    rotation: [0, Math.PI / 2, 0],
-    size: [0.46, 0.18],
-    accent: '#72b8ae',
+  const loungeLamp = new THREE.PointLight(0xffa36d, 7.5, 3.6, 2);
+  loungeLamp.position.set(-2.55, 1.45, -6.7);
+  lounge.add(loungeLamp);
+  warmLights.push(loungeLamp);
+
+  // GALLEY / MESS. Full-height cabinetry, food storage and a permanent table make
+  // this read as daily living infrastructure rather than a countertop prop.
+  const galley = new THREE.Group();
+  galley.name = 'Galley and mess';
+  ship.add(galley);
+  box(galley, [1.12, 0.09, 3.82], [2.98, 0.91, -1.55], materials.wood, [0, 0, 0], 0.035);
+  for (let index = 0; index < 4; index += 1) {
+    const z = -2.92 + index * 0.92;
+    box(galley, [1.0, 0.76, 0.82], [3.0, 0.43, z], materials.darkPaint, [0, 0, 0], 0.045);
+    box(galley, [0.035, 0.62, 0.68], [2.48, 0.45, z], materials.creamPaint, [0, 0, 0], 0.018);
+    box(galley, [0.022, 0.08, 0.22], [2.455, 0.48, z + 0.2], materials.bareMetal, [0, 0, 0], 0.008);
+  }
+  box(galley, [0.1, 0.72, 3.68], [3.44, 1.3, -1.55], materials.creamPaint, [0, 0, 0], 0.02);
+  [-2.72, -1.74, -0.76, 0.22].forEach((z, index) => {
+    box(galley, [0.72, 0.72, 0.86], [3.08, 2.02, z], index === 0 ? materials.darkPaint : materials.creamPaint, [0, 0, 0], 0.045);
+    box(galley, [0.035, 0.58, 0.72], [2.7, 2.02, z], materials.darkPaint, [0, 0, 0], 0.015);
+    box(galley, [0.02, 0.12, 0.05], [2.67, 2.02, z + 0.26], materials.bareMetal, [0, 0, 0], 0.006);
   });
 
-  // Utility bench, tool wall, storage, cabling, and maintenance clutter.
+  // Sink, faucet, induction rings and compact oven.
+  box(galley, [0.5, 0.025, 0.62], [2.75, 0.965, -2.55], materials.rubber, [0, 0, 0], 0.025);
+  box(galley, [0.4, 0.018, 0.5], [2.75, 0.98, -2.55], materials.darkGlass, [0, 0, 0], 0.055, false);
+  tube(galley, [[3.08, 0.98, -2.68], [3.08, 1.24, -2.68], [2.87, 1.25, -2.6]], 0.014, materials.bareMetal, false, 14);
+  [-1.12, -0.62].forEach((z, index) => {
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(index ? 0.12 : 0.15, 0.009, 6, 24), materials.copper);
+    ring.rotation.x = Math.PI / 2;
+    ring.position.set(2.73, 0.975, z);
+    galley.add(ring);
+  });
+  box(galley, [0.05, 0.5, 0.68], [2.46, 0.48, 0.2], materials.darkGlass, [0, 0, 0], 0.025, false);
+  box(galley, [0.025, 0.05, 0.42], [2.425, 0.73, 0.2], materials.bareMetal, [0, 0, 0], 0.008);
+  for (let index = 0; index < 5; index += 1) {
+    cylinder(galley, [0.009, 0.009], 0.009, [2.42, 0.78, -0.02 + index * 0.11], index === 1 ? materials.greenGlow : materials.amberGlow, [0, 0, Math.PI / 2], 8, false);
+  }
+  box(galley, [0.035, 0.025, 3.05], [2.66, 1.64, -1.55], materials.amberGlow, [0, 0, 0], 0.008, false);
+  const galleyLight = new THREE.PointLight(0xffb77c, 6, 3.2, 2);
+  galleyLight.position.set(2.25, 1.55, -1.5);
+  galley.add(galleyLight);
+  warmLights.push(galleyLight);
+
+  // Open shelf with cups and food tins.
+  box(galley, [0.58, 0.045, 1.22], [3.12, 1.48, -2.15], materials.wood, [0, 0, 0], 0.016);
+  [-2.52, -2.3, -2.08, -1.86].forEach((z, index) => {
+    cylinder(galley, [0.055, 0.048], 0.13, [2.92, 1.57, z], index % 2 ? materials.copper : materials.ceramic, [0, 0, 0], 14);
+  });
+
+  // Permanent mess booth opposite the galley.
+  box(galley, [0.76, 0.18, 2.42], [-2.96, 0.38, -1.45], materials.darkPaint, [0, 0, 0], 0.075);
+  box(galley, [0.16, 0.68, 2.34], [-3.28, 0.76, -1.45], materials.fabric, [0, 0, -3 * DEG], 0.065);
+  [-2.12, -1.4, -0.68].forEach((z) => {
+    box(galley, [0.65, 0.1, 0.62], [-2.9, 0.51, z], materials.linen, [0, 0, 0], 0.055);
+  });
+  box(galley, [0.82, 0.055, 1.42], [-1.78, 0.72, -1.45], materials.wood, [0, 0, 0], 0.04);
+  cylinder(galley, [0.055, 0.055], 0.65, [-1.78, 0.36, -1.45], materials.bareMetal, [0, 0, 0], 10);
+  box(galley, [0.5, 0.06, 0.5], [-1.05, 0.44, -1.45], materials.fabric, [0, 0, 0], 0.05);
+  cylinder(galley, [0.045, 0.045], 0.42, [-1.05, 0.21, -1.45], materials.bareMetal, [0, 0, 0], 10);
+  cylinder(galley, [0.105, 0.075], 0.055, [-1.62, 0.77, -1.66], materials.ceramic, [0, 0, 0], 20);
+  box(galley, [0.22, 0.018, 0.28], [-1.92, 0.76, -1.2], materials.linen, [0, 12 * DEG, 0], 0.008, false);
+  addLabel(galley, {
+    title: 'GALLEY / MESS',
+    subtitle: 'FOOD / WATER / DRY STORES',
+    position: [3.485, 2.48, -1.5],
+    rotation: [0, -Math.PI / 2, 0],
+    size: [0.76, 0.17],
+  });
+
+  // PRIVATE QUARTERS. A real room on the port side, with a partially open pocket
+  // door, under-window berth, desk, wardrobe and personal storage.
+  const quarters = new THREE.Group();
+  quarters.name = 'Private quarters';
+  ship.add(quarters);
+  box(quarters, [0.15, 2.72, 1.35], [-0.86, 1.42, 1.75], materials.creamPaint, [0, 0, 0], 0.035);
+  box(quarters, [0.15, 2.72, 2.9], [-0.86, 1.42, 6.25], materials.creamPaint, [0, 0, 0], 0.035);
+  box(quarters, [0.17, 0.42, 6.5], [-0.86, 2.82, 4.45], materials.darkPaint, [0, 0, 0], 0.03);
+  [2.43, 4.8].forEach((z) => {
+    box(quarters, [0.19, 2.45, 0.15], [-0.84, 1.3, z], materials.bareMetal, [0, 0, 0], 0.025);
+  });
+  box(quarters, [0.075, 2.24, 0.98], [-0.76, 1.27, 4.28], materials.darkPaint, [0, 0, 0], 0.045);
+  box(quarters, [0.02, 0.045, 0.7], [-0.715, 1.18, 4.28], materials.bareMetal, [0, 0, 0], 0.008);
+  addLabel(quarters, {
+    title: 'PERSONAL QUARTERS',
+    subtitle: 'PORT / QUIET BAY',
+    position: [-0.67, 2.35, 2.0],
+    rotation: [0, -Math.PI / 2, 0],
+    size: [0.56, 0.13],
+    align: 'center',
+  });
+
+  box(quarters, [1.42, 0.18, 2.28], [-2.73, 0.39, 5.72], materials.darkPaint, [0, 0, 0], 0.065);
+  box(quarters, [1.3, 0.16, 2.14], [-2.73, 0.55, 5.72], materials.linen, [0, 0, 0], 0.1);
+  box(quarters, [1.14, 0.055, 1.25], [-2.68, 0.66, 5.42], materials.blanket, [0, 0, -2 * DEG], 0.035);
+  box(quarters, [0.62, 0.15, 0.38], [-2.74, 0.7, 6.52], materials.linen, [0, 0, 0], 0.09);
+  box(quarters, [1.38, 0.78, 0.1], [-2.73, 0.78, 6.91], materials.wood, [0, 0, 0], 0.045);
+  [-3.12, -2.72, -2.32].forEach((x) => {
+    for (let z = 5.08; z <= 6.42; z += 0.67) {
+      box(quarters, [0.04, 0.25, 0.54], [x, 0.28, z], materials.creamPaint, [0, 0, 0], 0.012);
+      box(quarters, [0.025, 0.025, 0.12], [x + 0.025, 0.28, z], materials.bareMetal, [0, 0, 0], 0.006);
+    }
+  });
+  box(quarters, [1.85, 0.025, 3.15], [-2.18, 0.025, 4.7], materials.fabric, [0, 0, 0], 0.025, false);
+
+  // Compact desk and reading corner at the forward end of the cabin.
+  box(quarters, [0.72, 0.055, 1.28], [-3.12, 0.76, 3.16], materials.wood, [0, 0, 0], 0.035);
+  box(quarters, [0.05, 0.68, 1.15], [-3.42, 0.4, 3.16], materials.bareMetal, [0, 0, 0], 0.012);
+  box(quarters, [0.48, 0.08, 0.48], [-2.24, 0.46, 3.16], materials.fabric, [0, 0, 0], 0.055);
+  cylinder(quarters, [0.035, 0.035], 0.44, [-2.24, 0.22, 3.16], materials.bareMetal, [0, 0, 0], 10);
+  box(quarters, [0.24, 0.035, 0.31], [-3.04, 0.81, 3.34], materials.darkPaint, [0, -8 * DEG, 0], 0.012);
+  addBooks(quarters, [-3.24, 1.45, 3.62], [0, -Math.PI / 2, 0], materials, 7);
+  box(quarters, [0.24, 0.045, 1.08], [-3.3, 1.42, 3.25], materials.wood, [0, 0, 0], 0.015);
+  addPhotoFrame(quarters, [-3.47, 1.8, 3.0], [0, Math.PI / 2, 0], materials, 'warm');
+  addPhotoFrame(quarters, [-3.47, 2.06, 3.38], [0, Math.PI / 2, 0], materials, 'cool');
+
+  // Wardrobe faces into the cabin and includes open shelves for folded clothing.
+  [5.58, 6.42, 7.17].forEach((z, index) => {
+    box(quarters, [0.54, 2.12, index === 2 ? 0.58 : 0.74], [-1.2, 1.1, z], index === 2 ? materials.darkPaint : materials.creamPaint, [0, 0, 0], 0.04);
+    if (index < 2) {
+      box(quarters, [0.035, 1.92, 0.6], [-1.5, 1.1, z], materials.darkPaint, [0, 0, 0], 0.015);
+      box(quarters, [0.022, 0.16, 0.04], [-1.525, 1.12, z + 0.2], materials.bareMetal, [0, 0, 0], 0.006);
+    }
+  });
+  for (let level = 0; level < 3; level += 1) {
+    box(quarters, [0.42, 0.035, 0.48], [-1.48, 0.55 + level * 0.42, 7.17], materials.wood, [0, 0, 0], 0.01);
+    box(quarters, [0.32, 0.08, 0.32], [-1.5, 0.62 + level * 0.42, 7.17], level % 2 ? materials.fabric : materials.linen, [0, 0, 0], 0.025);
+  }
+  box(quarters, [0.3, 0.28, 0.2], [-3.28, 1.38, 6.82], materials.darkPaint, [0, 0, 0], 0.035);
+  box(quarters, [0.12, 0.025, 0.08], [-3.1, 1.41, 6.82], materials.amberGlow, [0, 0, 0], 0.018, false);
+  const readingLight = new THREE.PointLight(0xffa86d, 7.2, 2.4, 2);
+  readingLight.position.set(-2.9, 1.42, 6.75);
+  quarters.add(readingLight);
+
+  // HYGIENE / WATER RECOVERY. A compact enclosed washroom makes the ship viable
+  // for months aboard without turning the cabin into a bathroom display.
+  const hygiene = new THREE.Group();
+  hygiene.name = 'Hygiene compartment';
+  ship.add(hygiene);
+  box(hygiene, [2.45, 0.025, 2.78], [2.2, 0.025, 6.34], materials.ceramic, [0, 0, 0], 0.025, false);
+  box(hygiene, [2.5, 2.72, 0.13], [2.2, 1.42, 4.92], materials.creamPaint, [0, 0, 0], 0.035);
+  box(hygiene, [2.5, 2.72, 0.13], [2.2, 1.42, 7.78], materials.creamPaint, [0, 0, 0], 0.035);
+  box(hygiene, [0.14, 2.72, 0.58], [0.94, 1.42, 5.21], materials.creamPaint, [0, 0, 0], 0.035);
+  box(hygiene, [0.14, 2.72, 1.06], [0.94, 1.42, 7.25], materials.creamPaint, [0, 0, 0], 0.035);
+  box(hygiene, [0.16, 0.42, 2.86], [0.94, 2.82, 6.35], materials.darkPaint, [0, 0, 0], 0.03);
+  box(hygiene, [0.07, 2.22, 0.82], [0.87, 1.26, 7.17], materials.frostedGlass, [0, 0, 0], 0.025, false);
+  box(hygiene, [0.025, 0.04, 0.58], [0.825, 1.18, 7.17], materials.bareMetal, [0, 0, 0], 0.008);
+  addLabel(hygiene, {
+    title: 'HYGIENE',
+    subtitle: 'WASH / RECOVERY',
+    position: [0.79, 2.35, 5.45],
+    rotation: [0, Math.PI / 2, 0],
+    size: [0.48, 0.12],
+    align: 'center',
+    accent: '#72a69f',
+  });
+
+  // Wash basin and mirror on the starboard wall.
+  box(hygiene, [0.5, 0.12, 0.82], [3.18, 0.81, 5.55], materials.wood, [0, 0, 0], 0.045);
+  cylinder(hygiene, [0.17, 0.13], 0.08, [3.0, 0.91, 5.55], materials.ceramic, [0, 0, 0], 24);
+  cylinder(hygiene, [0.105, 0.105], 0.014, [3.0, 0.955, 5.55], materials.darkGlass, [0, 0, 0], 24, false);
+  tube(hygiene, [[3.3, 0.91, 5.45], [3.3, 1.13, 5.45], [3.09, 1.15, 5.53]], 0.012, materials.bareMetal, false, 12);
+  box(hygiene, [0.035, 0.68, 0.78], [3.44, 1.62, 5.55], materials.darkGlass, [0, 0, 0], 0.025, false);
+  box(hygiene, [0.055, 0.76, 0.86], [3.465, 1.62, 5.55], materials.bareMetal, [0, 0, 0], 0.018);
+  box(hygiene, [0.06, 0.66, 0.76], [3.49, 1.62, 5.55], materials.darkGlass, [0, 0, 0], 0.02, false);
+
+  // Toilet and shower are visually distinct, clean and compact.
+  cylinder(hygiene, [0.16, 0.21], 0.42, [1.58, 0.25, 7.02], materials.ceramic, [0, 0, 0], 20);
+  box(hygiene, [0.44, 0.08, 0.56], [1.58, 0.49, 7.02], materials.ceramic, [0, 0, 0], 0.15);
+  const toiletSeat = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.035, 8, 24), materials.darkPaint);
+  toiletSeat.rotation.x = Math.PI / 2;
+  toiletSeat.scale.z = 1.28;
+  toiletSeat.position.set(1.58, 0.55, 7.02);
+  hygiene.add(toiletSeat);
+  box(hygiene, [0.62, 0.045, 1.0], [2.9, 0.075, 7.08], materials.darkPaint, [0, 0, 0], 0.025);
+  box(hygiene, [0.035, 2.22, 0.96], [2.57, 1.18, 7.08], materials.frostedGlass, [0, 0, 0], 0.025, false);
+  box(hygiene, [0.74, 2.22, 0.035], [2.92, 1.18, 6.58], materials.frostedGlass, [0, 0, 0], 0.025, false);
+  tube(hygiene, [[3.34, 0.75, 7.42], [3.34, 2.1, 7.42], [3.14, 2.18, 7.35]], 0.015, materials.bareMetal, false, 18);
+  cylinder(hygiene, [0.065, 0.065], 0.025, [3.08, 2.16, 7.35], materials.bareMetal, [0, 0, Math.PI / 2], 16);
+  box(hygiene, [0.025, 0.025, 0.72], [3.4, 1.22, 6.15], materials.bareMetal, [0, 0, 0], 0.008);
+  [6.0, 6.28].forEach((z, index) => {
+    cylinder(hygiene, [0.075, 0.075], 0.32, [3.32, 1.32 + index * 0.18, z], index ? materials.linen : materials.fabric, [Math.PI / 2, 0, 0], 16);
+  });
+  box(hygiene, [0.5, 0.025, 0.035], [2.9, 2.52, 5.88], materials.screen, [0, 0, 0], 0.008, false);
+
+  // SERVICE BAY / WORKSHOP. Proper bench depth, tool storage, laundry, spares and
+  // an EVA-ready area make the aft end useful rather than empty cargo volume.
   const utility = new THREE.Group();
-  utility.position.set(0.84, 0, 5.5);
+  utility.name = 'Service workshop';
   ship.add(utility);
-  box(utility, [1.42, 0.14, 2.25], [1.71, 0.83, 3.47], materials.bareMetal, [0, 0, 0], 0.045);
-  box(utility, [1.25, 0.75, 0.08], [1.75, 1.35, 4.56], materials.darkPaint, [0, 0, 0], 0.03);
-  box(utility, [1.33, 0.72, 0.55], [1.74, 0.4, 3.05], materials.darkPaint, [0, 0, 0], 0.055);
-  box(utility, [1.33, 0.72, 0.55], [1.74, 0.4, 3.72], materials.darkPaint, [0, 0, 0], 0.055);
-  addVent(utility, [1.75, 1.42, 4.51], [0, 0, 0], materials, 0.66);
+  box(utility, [1.08, 0.12, 3.15], [2.96, 0.84, 10.04], materials.bareMetal, [0, 0, 0], 0.04);
+  [-1.02, 0, 1.02].forEach((offset, index) => {
+    box(utility, [0.98, 0.72, 0.88], [3.0, 0.42, 10.04 + offset], index === 1 ? materials.darkPaint : materials.creamPaint, [0, 0, 0], 0.045);
+    for (let drawer = 0; drawer < 3; drawer += 1) {
+      box(utility, [0.035, 0.17, 0.72], [2.49, 0.25 + drawer * 0.21, 10.04 + offset], materials.darkPaint, [0, 0, 0], 0.012);
+      box(utility, [0.022, 0.025, 0.2], [2.465, 0.25 + drawer * 0.21, 10.04 + offset], materials.bareMetal, [0, 0, 0], 0.006);
+    }
+  });
+  box(utility, [0.08, 1.15, 2.95], [3.43, 1.48, 10.04], materials.darkPaint, [0, 0, 0], 0.025);
+  for (let row = 0; row < 4; row += 1) {
+    for (let column = 0; column < 8; column += 1) {
+      cylinder(utility, [0.008, 0.008], 0.04, [3.37, 1.08 + row * 0.23, 9.05 + column * 0.28], materials.bareMetal, [0, 0, Math.PI / 2], 8, false);
+    }
+  }
+  for (let index = 0; index < 5; index += 1) {
+    cylinder(utility, [0.022, 0.022], 0.28, [3.32, 1.2 + (index % 3) * 0.26, 9.25 + index * 0.4], index % 2 ? materials.copper : materials.bareMetal, [Math.PI / 2, 0, 0], 10);
+  }
+  tube(utility, [[3.31, 1.8, 10.85], [3.15, 1.62, 10.75], [3.29, 1.32, 10.95]], 0.014, materials.rubber, false, 16);
+  tube(utility, [[3.31, 1.92, 10.55], [3.12, 1.75, 10.48], [3.3, 1.48, 10.35]], 0.012, materials.copper, false, 16);
   const wrench = createWrench(materials);
-  wrench.position.set(1.45, 0.98, 3.62);
-  wrench.rotation.set(0, 23 * DEG, 82 * DEG);
+  wrench.position.set(2.78, 0.96, 9.72);
+  wrench.rotation.set(0, 18 * DEG, 82 * DEG);
   utility.add(wrench);
   grabbables.push(wrench);
-  for (let index = 0; index < 4; index += 1) {
-    cylinder(utility, [0.035, 0.035], 0.36, [1.23 + index * 0.31, 1.35 + (index % 2) * 0.18, 4.49], index % 2 ? materials.copper : materials.bareMetal, [Math.PI / 2, 0, 0], 10);
+  for (let index = 0; index < 5; index += 1) {
+    box(utility, [0.58, 0.3, 0.46], [3.08, 2.28, 9.05 + index * 0.54], index % 2 ? materials.darkPaint : materials.creamPaint, [0, 0, 0], 0.035);
+    addLabel(utility, {
+      title: `P-${String(index + 1).padStart(2, '0')}`,
+      subtitle: 'PARTS',
+      position: [2.775, 2.27, 9.05 + index * 0.54],
+      rotation: [0, -Math.PI / 2, 0],
+      size: [0.2, 0.065],
+      align: 'center',
+    });
   }
-  tube(utility, [[1.15, 1.72, 4.48], [1.3, 1.88, 4.37], [1.18, 2.13, 4.5]], 0.018, materials.redGlow, false, 16);
-  tube(utility, [[1.45, 1.72, 4.48], [1.62, 1.9, 4.36], [1.53, 2.18, 4.49]], 0.018, materials.rubber, false, 16);
-  addStorageCrate(ship, [3.08, 0.29, 7.35], [0, -Math.PI / 2, 0], materials, 'L-04');
-  addStorageCrate(ship, [-3.08, 0.29, -2.25], [0, Math.PI / 2, 0], materials, 'O2');
+  box(utility, [0.035, 0.025, 2.7], [2.45, 1.0, 10.05], materials.amberGlow, [0, 0, 0], 0.008, false);
 
-  // Galley and mess occupy a full bay opposite the bunk rather than being squeezed into furniture scale.
-  const galley = new THREE.Group();
-  galley.position.set(0.82, 0, 0.3);
-  ship.add(galley);
-  box(galley, [1.16, 0.12, 3.3], [1.97, 0.86, 2.9], materials.bareMetal, [0, 0, 0], 0.04);
-  box(galley, [1.05, 0.78, 0.65], [2.03, 0.42, 2.05], materials.darkPaint, [0, 0, 0], 0.06);
-  box(galley, [1.05, 0.78, 0.65], [2.03, 0.42, 3.0], materials.darkPaint, [0, 0, 0], 0.06);
-  box(galley, [1.05, 0.78, 0.65], [2.03, 0.42, 3.95], materials.darkPaint, [0, 0, 0], 0.06);
-  box(galley, [1.12, 0.75, 0.09], [2.01, 1.43, 4.44], materials.darkPaint, [0, 0, 0], 0.035);
-  box(galley, [0.48, 0.04, 0.68], [2.0, 0.94, 3.17], materials.rubber, [0, 0, 0], 0.02);
-  cylinder(galley, [0.11, 0.14], 0.2, [1.82, 1.04, 2.55], materials.copper, [0, 0, 0], 16);
-  tube(galley, [[1.77, 1.15, 2.5], [1.74, 1.32, 2.47], [1.9, 1.35, 2.5]], 0.018, materials.bareMetal, false, 12);
-  addLabel(galley, {
-    title: 'GALLEY / 02',
-    subtitle: 'PLEASE CLEAN FILTER AFTER USE',
-    position: [2.585, 1.6, 4.1],
-    rotation: [0, -Math.PI / 2, 0],
-    size: [0.78, 0.23],
+  // Laundry and linen module on the port side.
+  box(utility, [0.82, 1.92, 1.32], [-3.08, 1.0, 9.25], materials.creamPaint, [0, 0, 0], 0.055);
+  [0.62, 1.38].forEach((y, index) => {
+    cylinder(utility, [0.25, 0.25], 0.055, [-2.64, y, 9.25], materials.rubber, [0, 0, Math.PI / 2], 24, false);
+    cylinder(utility, [0.19, 0.19], 0.058, [-2.605, y, 9.25], materials.darkGlass, [0, 0, Math.PI / 2], 24, false);
+    box(utility, [0.025, 0.045, 0.18], [-2.59, y + 0.31, 9.25], index ? materials.greenGlow : materials.amberGlow, [0, 0, 0], 0.006, false);
+  });
+  addLabel(utility, {
+    title: 'LAUNDRY / LINEN',
+    subtitle: 'WATER LOOP B',
+    position: [-2.59, 1.9, 9.25],
+    rotation: [0, Math.PI / 2, 0],
+    size: [0.48, 0.11],
+    align: 'center',
   });
 
-  // Empty cargo and spare-crew volume makes it obvious the ship is not purpose-built for one body.
-  const cargo = new THREE.Group();
-  ship.add(cargo);
-  for (let row = 0; row < 3; row += 1) {
-    box(cargo, [0.09, 2.55, 2.1], [-3.18, 1.28, 10.45 + row * 1.45], materials.bareMetal, [0, 0, 0], 0.02);
-    box(cargo, [0.78, 0.08, 2.1], [-2.78, 0.48, 10.45 + row * 1.45], materials.darkPaint, [0, 0, 0], 0.025);
-    box(cargo, [0.78, 0.08, 2.1], [-2.78, 1.42, 10.45 + row * 1.45], materials.darkPaint, [0, 0, 0], 0.025);
-    box(cargo, [0.78, 0.08, 2.1], [-2.78, 2.32, 10.45 + row * 1.45], materials.darkPaint, [0, 0, 0], 0.025);
+  // Tall stores replace the empty shelving wall with actual secured provisions.
+  for (let index = 0; index < 3; index += 1) {
+    const z = 10.55 + index * 0.78;
+    box(utility, [0.78, 2.18, 0.68], [-3.08, 1.12, z], materials.darkPaint, [0, 0, 0], 0.045);
+    box(utility, [0.035, 1.98, 0.56], [-2.65, 1.12, z], materials.creamPaint, [0, 0, 0], 0.015);
+    box(utility, [0.02, 0.18, 0.04], [-2.625, 1.15, z + 0.19], materials.bareMetal, [0, 0, 0], 0.006);
+    addLabel(utility, {
+      title: ['DRY', 'MED', 'SPARES'][index],
+      subtitle: ['PROVISIONS', 'CABINET', 'SERVICE'][index],
+      position: [-2.615, 1.72, z],
+      rotation: [0, Math.PI / 2, 0],
+      size: [0.34, 0.08],
+      align: 'center',
+    });
   }
-  addStorageCrate(cargo, [-2.75, 0.76, 10.05], [0, Math.PI / 2, 0], materials, 'S-12');
-  addStorageCrate(cargo, [-2.75, 1.72, 11.45], [0, Math.PI / 2, 0], materials, 'VAC');
-  addStorageCrate(cargo, [-2.75, 0.76, 12.78], [0, Math.PI / 2, 0], materials, 'H2O');
 
-  // Broad pressure arches separate flight, habitation, service, and airlock zones.
-  [-9.9, 1.05, 8.1, 13.25].forEach((z, index) => {
-    const archMaterial = index === 3 ? materials.exterior : materials.darkPaint;
+  // EVA-ready corner immediately forward of the inner airlock.
+  const eva = new THREE.Group();
+  eva.name = 'EVA ready station';
+  ship.add(eva);
+  box(eva, [0.78, 0.18, 1.5], [3.05, 0.34, 12.25], materials.darkPaint, [0, 0, 0], 0.06);
+  box(eva, [0.12, 0.72, 1.42], [3.42, 0.74, 12.25], materials.fabric, [0, 0, -2 * DEG], 0.045);
+  box(eva, [0.62, 0.08, 1.35], [3.08, 1.22, 12.25], materials.bareMetal, [0, 0, 0], 0.025);
+  const helmet = createEVAHelmet(materials);
+  helmet.position.set(2.97, 1.48, 12.25);
+  helmet.rotation.y = -Math.PI / 2;
+  eva.add(helmet);
+  [-0.23, 0.23].forEach((offset) => {
+    box(eva, [0.26, 0.16, 0.4], [2.92, 0.12, 12.25 + offset], materials.rubber, [0, 0, 0], 0.055);
+  });
+
+  // Hanging pressure suit: restrained hard pieces over fabric, not a character.
+  box(eva, [0.2, 0.62, 0.5], [-3.28, 1.48, 12.52], materials.linen, [0, 0, 0], 0.08);
+  box(eva, [0.22, 0.25, 0.42], [-3.3, 1.73, 12.52], materials.ceramic, [0, 0, 0], 0.055);
+  [-0.34, 0.34].forEach((zOffset) => {
+    cylinder(eva, [0.055, 0.07], 0.62, [-3.28, 1.4, 12.52 + zOffset], materials.linen, [0, 0, 0], 12);
+    cylinder(eva, [0.065, 0.075], 0.65, [-3.28, 0.69, 12.52 + zOffset * 0.55], materials.linen, [0, 0, 0], 12);
+    box(eva, [0.28, 0.18, 0.2], [-3.2, 0.25, 12.52 + zOffset * 0.55], materials.rubber, [0, 0, 0], 0.055);
+  });
+  tube(eva, [[-3.35, 1.55, 12.15], [-3.08, 1.35, 12.08], [-3.3, 1.05, 12.0]], 0.018, materials.copper, false, 18);
+  addLabel(eva, {
+    title: 'EVA READY',
+    subtitle: 'SUIT / HELMET / TETHER',
+    position: [3.49, 2.05, 12.25],
+    rotation: [0, -Math.PI / 2, 0],
+    size: [0.58, 0.13],
+    align: 'center',
+  });
+
+  // Broad pressure arches give each run a threshold instead of one uninterrupted hall.
+  [-9.9, -4.35, 1.05, 8.1, 13.25].forEach((z) => {
+    const archMaterial = z === 13.25 ? materials.exterior : materials.darkPaint;
     box(ship, [1.85, 3.0, 0.24], [-2.65, 1.5, z], archMaterial, [0, 0, 0], 0.045);
     box(ship, [1.85, 3.0, 0.24], [2.65, 1.5, z], archMaterial, [0, 0, 0], 0.045);
     box(ship, [3.55, 0.52, 0.24], [0, 2.75, z], archMaterial, [0, 0, 0], 0.045);
@@ -869,6 +1254,7 @@ export function createShip(materials) {
   box(airlock, [2.75, 0.42, 0.18], [0, 2.35, 4.92], materials.darkPaint, [0, 0, 0], 0.03);
   box(airlock, [2.75, 0.36, 0.18], [0, 0.18, 4.92], materials.darkPaint, [0, 0, 0], 0.03);
   const innerDoor = new THREE.Group();
+  innerDoor.userData.dynamic = true;
   innerDoor.position.z = 4.9;
   airlock.add(innerDoor);
   box(innerDoor, [2.3, 2.02, 0.13], [0, 1.23, 0], materials.exterior, [0, 0, 0], 0.15);
@@ -900,6 +1286,29 @@ export function createShip(materials) {
   airlockLight.position.set(0, 2.22, 5.55);
   airlock.add(airlockLight);
 
+  // Handrails, tether points and emergency pockets finish the vestibule as a
+  // working transition space rather than an empty box around a door.
+  [-3.38, 3.38].forEach((x, index) => {
+    tube(
+      airlock,
+      [[x, 0.72, 5.12], [x + (index ? -0.08 : 0.08), 1.02, 5.35], [x, 1.02, 5.95]],
+      0.022,
+      materials.bareMetal,
+      false,
+      18,
+    );
+    box(airlock, [0.12, 0.46, 0.54], [x + (index ? -0.08 : 0.08), 1.72, 5.6], materials.darkPaint, [0, 0, 0], 0.03);
+    box(airlock, [0.025, 0.22, 0.3], [x + (index ? -0.15 : 0.15), 1.72, 5.6], index ? materials.redGlow : materials.amberGlow, [0, 0, 0], 0.008, false);
+  });
+  for (let index = 0; index < 4; index += 1) {
+    const tether = new THREE.Mesh(new THREE.TorusGeometry(0.055, 0.012, 6, 16), materials.copper);
+    tether.rotation.y = Math.PI / 2;
+    tether.position.set(index < 2 ? -3.35 : 3.35, 0.45 + (index % 2) * 1.4, 5.55);
+    airlock.add(tether);
+  }
+  box(airlock, [2.55, 0.025, 0.035], [0, 0.04, 5.15], materials.redGlow, [0, 0, 0], 0.008, false);
+  box(airlock, [2.55, 0.025, 0.035], [0, 0.04, 6.02], materials.redGlow, [0, 0, 0], 0.008, false);
+
   // Wall system panels and switches.
   addScreen(ship, {
     position: [-3.505, 1.55, -2.15],
@@ -924,6 +1333,13 @@ export function createShip(materials) {
   interactables.push(lightSwitch);
   box(ship, [0.09, 0.32, 0.22], [-3.5, 1.25, -0.15], materials.rubber, [0, 0, 0], 0.025);
 
+  // Merge static primitives by material inside each spatial zone. This preserves
+  // room-level culling while bringing the draw-call cost back into standalone-VR range.
+  [cockpit, lounge, galley, quarters, hygiene, utility, eva, airlock].forEach((zone) => {
+    batchStaticMeshes(zone, { name: `${zone.name || 'Ship zone'} batch` });
+  });
+  batchStaticMeshes(ship, { recursive: false, name: 'Pressure hull batch' });
+
   let doorOpen = false;
   let lightDimmed = false;
   let lastScreenUpdate = 0;
@@ -944,11 +1360,32 @@ export function createShip(materials) {
   });
 
   const collisionObstacles = [
-    new THREE.Box2(new THREE.Vector2(-3.5, -6.25), new THREE.Vector2(-2.02, -3.45)),
-    new THREE.Box2(new THREE.Vector2(-3.48, 4.15), new THREE.Vector2(-2.0, 7.0)),
-    new THREE.Box2(new THREE.Vector2(2.1, 1.7), new THREE.Vector2(3.5, 4.7)),
-    new THREE.Box2(new THREE.Vector2(2.0, 8.0), new THREE.Vector2(3.5, 10.55)),
-    new THREE.Box2(new THREE.Vector2(-3.5, 9.15), new THREE.Vector2(-2.18, 14.1)),
+    // Common room and observation perch.
+    new THREE.Box2(new THREE.Vector2(-3.5, -8.05), new THREE.Vector2(-2.35, -5.22)),
+    new THREE.Box2(new THREE.Vector2(-2.03, -7.18), new THREE.Vector2(-1.05, -5.9)),
+    new THREE.Box2(new THREE.Vector2(2.93, -10.18), new THREE.Vector2(3.5, -5.35)),
+    // Galley and mess booth.
+    new THREE.Box2(new THREE.Vector2(2.36, -3.5), new THREE.Vector2(3.5, 0.45)),
+    new THREE.Box2(new THREE.Vector2(-3.5, -2.75), new THREE.Vector2(-2.48, -0.15)),
+    new THREE.Box2(new THREE.Vector2(-2.3, -2.25), new THREE.Vector2(-0.76, -0.65)),
+    // Private quarters shell and furniture, leaving the pocket doorway clear.
+    new THREE.Box2(new THREE.Vector2(-1.02, 1.05), new THREE.Vector2(-0.7, 2.5)),
+    new THREE.Box2(new THREE.Vector2(-1.02, 3.78), new THREE.Vector2(-0.7, 7.75)),
+    new THREE.Box2(new THREE.Vector2(-3.5, 4.48), new THREE.Vector2(-1.98, 7.05)),
+    new THREE.Box2(new THREE.Vector2(-3.5, 2.45), new THREE.Vector2(-2.7, 3.9)),
+    new THREE.Box2(new THREE.Vector2(-1.58, 5.18), new THREE.Vector2(-0.9, 7.55)),
+    // Hygiene enclosure and its fixed fittings.
+    new THREE.Box2(new THREE.Vector2(0.78, 4.78), new THREE.Vector2(3.5, 5.05)),
+    new THREE.Box2(new THREE.Vector2(0.78, 7.65), new THREE.Vector2(3.5, 7.92)),
+    new THREE.Box2(new THREE.Vector2(0.78, 4.88), new THREE.Vector2(1.08, 5.55)),
+    new THREE.Box2(new THREE.Vector2(0.78, 6.7), new THREE.Vector2(1.08, 7.85)),
+    new THREE.Box2(new THREE.Vector2(2.58, 5.1), new THREE.Vector2(3.5, 6.0)),
+    new THREE.Box2(new THREE.Vector2(2.5, 6.5), new THREE.Vector2(3.5, 7.7)),
+    // Service bay, stores and EVA bench.
+    new THREE.Box2(new THREE.Vector2(2.35, 8.35), new THREE.Vector2(3.5, 11.7)),
+    new THREE.Box2(new THREE.Vector2(-3.5, 8.5), new THREE.Vector2(-2.55, 12.9)),
+    new THREE.Box2(new THREE.Vector2(2.55, 11.42), new THREE.Vector2(3.5, 13.02)),
+    // Flight deck furniture.
     new THREE.Box2(new THREE.Vector2(-1.68, -11.5), new THREE.Vector2(-0.63, -10.45)),
     new THREE.Box2(new THREE.Vector2(0.63, -11.5), new THREE.Vector2(1.68, -10.45)),
     new THREE.Box2(new THREE.Vector2(-2.95, -13.15), new THREE.Vector2(2.95, -11.9)),

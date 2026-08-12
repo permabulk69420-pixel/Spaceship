@@ -254,6 +254,12 @@ export function createMaterials() {
   fabricTexture.repeat.set(5, 5);
   const blanketTexture = makeSurfaceTexture({ seed: 77, base: [120, 70, 52], variation: 17, flecks: 60, weave: true });
   blanketTexture.repeat.set(6, 7);
+  const woodTexture = makeSurfaceTexture({ seed: 104, base: [91, 61, 43], variation: 18, flecks: 45 });
+  woodTexture.repeat.set(2, 7);
+  const linenTexture = makeSurfaceTexture({ seed: 118, base: [171, 161, 143], variation: 10, flecks: 32, weave: true });
+  linenTexture.repeat.set(5, 6);
+  const ceramicTexture = makeSurfaceTexture({ seed: 141, base: [177, 181, 174], variation: 6, flecks: 18 });
+  ceramicTexture.repeat.set(3, 3);
 
   const paint = new THREE.MeshStandardMaterial({
     color: 0xa3a49d,
@@ -304,6 +310,29 @@ export function createMaterials() {
     roughness: 1,
     metalness: 0,
   });
+  const wood = new THREE.MeshStandardMaterial({
+    color: 0x8a6248,
+    map: woodTexture,
+    roughness: 0.68,
+    metalness: 0.04,
+  });
+  const linen = new THREE.MeshStandardMaterial({
+    color: 0xc5b9a4,
+    map: linenTexture,
+    roughness: 1,
+    metalness: 0,
+  });
+  const ceramic = new THREE.MeshStandardMaterial({
+    color: 0xc4c8c0,
+    map: ceramicTexture,
+    roughness: 0.4,
+    metalness: 0.08,
+  });
+  const foliage = new THREE.MeshStandardMaterial({
+    color: 0x526a50,
+    roughness: 0.92,
+    metalness: 0,
+  });
   const glass = new THREE.MeshPhysicalMaterial({
     color: 0x8bb0b3,
     roughness: 0.08,
@@ -324,6 +353,17 @@ export function createMaterials() {
     transparent: true,
     opacity: 0.52,
     clearcoat: 0.9,
+  });
+  const frostedGlass = new THREE.MeshPhysicalMaterial({
+    color: 0x9baba8,
+    roughness: 0.58,
+    metalness: 0.04,
+    transparent: true,
+    opacity: 0.44,
+    transmission: 0.08,
+    thickness: 0.035,
+    depthWrite: false,
+    side: THREE.DoubleSide,
   });
   const screen = new THREE.MeshStandardMaterial({
     color: 0x73d8d0,
@@ -362,8 +402,13 @@ export function createMaterials() {
     rubber,
     fabric,
     blanket,
+    wood,
+    linen,
+    ceramic,
+    foliage,
     glass,
     darkGlass,
+    frostedGlass,
     screen,
     amberGlow,
     greenGlow,
